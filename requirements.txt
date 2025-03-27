@@ -1,0 +1,14 @@
+openai
+streamlit
+textstat
+textblob
+spacy
+langchain
+duckduckgo_search
+weasyprint
+markdown2
+PyMuPDF
+python-docx
+tiktoken
+arxiv
+serpapi
