@@ -1,8 +1,10 @@
 # export_utils.py – Report generation/export
 
 import os
-from models.openai_interface import call_openai_with_tracking
+from src.models.openai_interface import call_openai_with_tracking
 from markdown import markdown
+from playwright.async_api import async_playwright
+from src.models.scoring import format_score_block
 
 
 def generate_final_summary(agent, model="gpt-3.5-turbo", temperature=0.7):
@@ -171,54 +173,32 @@ def write_section_insights(f, agent):
             f.write("\n**💡 Improved Section:**\n")
             f.write(f"{upgrade['improved']}\n")
 
-async def export_report_to_markdown_and_pdf(agent, markdown_file="consultant_ai_report.md", pdf_file="consultant_ai_report.pdf"):
-    """
-    Exports the consulting report review to both markdown and PDF formats.
 
-    Purpose:
-    This function generates a markdown file summarizing the consulting report review and then converts it to a PDF file. It ensures the output directory exists, exports the report to markdown, converts the markdown to HTML, and finally renders the HTML to a PDF file.
+async def export_report_to_markdown_and_pdf(agent, base_dir):
+    """
+    Exports the consulting report review to both Markdown and PDF formats in a specified directory.
 
     Parameters:
-    agent (ReActConsultantAgent): An instance of the ReActConsultantAgent class, which contains the memory data to be exported.
-    markdown_file (str): The name of the markdown file to save. Default is "consultant_ai_report.md".
-    pdf_file (str): The name of the PDF file to save. Default is "consultant_ai_report.pdf".
+    agent (ReActConsultantAgent): The AI agent containing review memory.
+    base_dir (str or Path): Path where the files should be saved.
 
-    Workflow:
-    1. Ensures the output directory exists.
-    2. Exports the report to a markdown file using the `export_report_to_markdown` function.
-    3. Reads the markdown file and converts its content to HTML.
-    4. Wraps the HTML content in a basic HTML page structure.
-    5. Saves the HTML content to a temporary file.
-    6. Uses Playwright to render the HTML file to a PDF.
-    7. Handles any exceptions that occur during the PDF rendering process and prints appropriate messages.
-
-    Asynchronous Workflow:
-    1. Opens an async Playwright session.
-    2. Launches a Chromium browser.
-    3. Opens a new page in the browser.
-    4. Navigates to the local HTML file.
-    5. Generates a PDF from the HTML content.
-    6. Closes the browser.
-    7. Prints a success message if the PDF is saved successfully.
-    
     Returns:
-    None
+    tuple: Paths to the saved Markdown and PDF files.
     """
-    # Ensure output directory exists
-    output_dir = "../outputs/"
-    os.makedirs(output_dir, exist_ok=True)
-    markdown_file = os.path.join(output_dir, markdown_file)
-    pdf_file = os.path.join(output_dir, pdf_file)
+    os.makedirs(base_dir, exist_ok=True)
     
+    md_path = os.path.join(base_dir, "consultant_ai_report.md")
+    pdf_path = os.path.join(base_dir, "consultant_ai_report.pdf")
+    html_path = os.path.join(base_dir, "temp_report.html")
+
     # Step 1: Export to Markdown
-    export_report_to_markdown(agent, filename=markdown_file)
+    export_report_to_markdown(agent, filename=md_path)
 
     # Step 2: Convert to HTML
-    with open(markdown_file, "r") as f:
+    with open(md_path, "r") as f:
         md_text = f.read()
     html_content = markdown(md_text)
 
-    # Optional: wrap in basic HTML page
     full_html = f"""
     <html>
     <head>
@@ -236,21 +216,22 @@ async def export_report_to_markdown_and_pdf(agent, markdown_file="consultant_ai_
     </html>
     """
 
-    # Step 3: Save HTML and render to PDF
-    temp_html_path = os.path.join(output_dir, "temp_report.html")
-    with open(temp_html_path, "w") as f:
+    with open(html_path, "w") as f:
         f.write(full_html)
 
+    # Step 3: Render to PDF
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch()
             page = await browser.new_page()
-            await page.goto("file://" + os.path.abspath(temp_html_path))
-            await page.pdf(path=pdf_file, format="A4")
+            await page.goto("file://" + os.path.abspath(html_path))
+            await page.pdf(path=pdf_path, format="A4")
             await browser.close()
-            print(f"✅ PDF report saved as: {pdf_file}")
+            print(f"✅ PDF saved to: {pdf_path}")
     except Exception as e:
-        print(f"⚠️ PDF export failed: {str(e)}")
+        print(f"⚠️ PDF export failed: {e}")
+
+    return md_path, pdf_path
 
 
 def format_citations_block(agent):

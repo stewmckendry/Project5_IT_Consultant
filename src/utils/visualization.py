@@ -1,7 +1,7 @@
 # visualization.py – Tool usage display
 
-from utils.tools.tools_reasoning import categorize_tools_by_priority
-from utils.tools.tool_catalog import tool_priority_map, global_tools
+from src.utils.tools.tools_reasoning import categorize_tools_by_priority
+from src.utils.tools.tool_catalog import tool_priority_map, global_tools
 import matplotlib.pyplot as plt
 
 

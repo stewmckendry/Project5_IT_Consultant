@@ -1,13 +1,22 @@
-# openai_interface.py –  Handles all OpenAI API interactions
+# openai_interface.py – Handles all OpenAI API interactions
 
 import os
-from openai import OpenAI
 from dotenv import load_dotenv
+from openai import OpenAI, OpenAIError
 
-# Load the OpenAI API key from .env file and create client instance
+# Load the .env file
 load_dotenv()
-my_openai_api_key=os.getenv("OPENAI_API_KEY")
+
+# Get the API key
+my_openai_api_key = os.getenv("OPENAI_API_KEY")
+
+# Safety check
+if not my_openai_api_key:
+    raise OpenAIError("❌ OPENAI_API_KEY not set. Please check your .env file or environment variables.")
+
+# Create OpenAI client
 client = OpenAI(api_key=my_openai_api_key)
+
 
 def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, max_tokens=500):
     """

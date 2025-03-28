@@ -1,57 +1,77 @@
 # streamline_app.py – client-facing Streamlit app
 
+import os
+import sys
 import streamlit as st
+import requests
+
+# Add the project root to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 from src.utils.file_loader import load_report_text_from_file
 from src.utils.text_processing import split_report_into_sections
 from src.server.report_review_runner import run_full_report_review
 from src.utils.export_utils import export_report_to_markdown_and_pdf
 
-# App title and description
-st.set_page_config(page_title="AI Consulting Report Reviewer", layout="wide")
-st.title("📊 AI-Powered Consulting Report Reviewer")
-st.markdown("Upload a consulting report and let the AI analyze each section for clarity, alignment, completeness, and more.")
 
-# File uploader
-uploaded_file = st.file_uploader("Upload your consulting report (TXT, PDF, or DOCX)", type=["txt", "pdf", "docx"])
+BACKEND_URL = "http://localhost:8001/review_report/"
 
-# Processing options
-max_steps = st.slider("Number of ReAct steps per section", min_value=1, max_value=10, value=5)
-run_button = st.button("🔍 Run AI Review")
+def upload_and_review_report(file):
+    """
+    Sends the uploaded file to the FastAPI backend for processing.
+    """
+    if file is not None:
+        files = {"file": (file.name, file, "text/plain")}
+        response = requests.post(BACKEND_URL, files=files)
+        if response.status_code == 200:
+            result = response.json()
+            return result
+        else:
+            st.error(f"⚠️ Server error: {response.status_code}")
+    return None
 
-# Run review
-if run_button and uploaded_file:
-    with st.spinner("Processing your report with AI..."):
-        # Step 1: Load report text
-        report_text = load_report_text_from_file(uploaded_file)
 
-        # Step 2: Split into sections
-        report_sections = split_report_into_sections(report_text)
+st.title("📊 AI-Powered Consulting Report Review")
 
-        # Step 3: Run full ReAct loop
-        agent = run_full_report_review(report_sections, max_steps=max_steps)
+uploaded_file = st.file_uploader("Upload your consulting report (.txt)", type=["txt"])
 
-        # Step 4: Export report
-        export_report_to_markdown_and_pdf(agent)
+if uploaded_file:
+    with st.spinner("🔍 Analyzing report... please wait..."):
+        result = upload_and_review_report(uploaded_file)
 
-        st.success("✅ AI review complete! Report exported to Markdown and PDF.")
-        st.markdown("---")
-        st.markdown("📄 Download your outputs below:")
+    # After successful result
+    if result and result["status"] == "success":
+        st.success("✅ Review complete!")
+        st.markdown("### Final Summary")
+        st.markdown(result["result"]["final_summary"])
 
-        # Show download links
-        st.download_button(
-            label="📥 Download Markdown Report",
-            data=open("Outputs/consultant_ai_report.md", "rb").read(),
-            file_name="consultant_ai_report.md",
-            mime="text/markdown"
-        )
+        st.markdown("### Top Issues")
+        st.markdown(result["result"].get("top_issues", "None found."))
 
-        st.download_button(
-            label="📥 Download PDF Report",
-            data=open("Outputs/consultant_ai_report.pdf", "rb").read(),
-            file_name="consultant_ai_report.pdf",
-            mime="application/pdf"
-        )
+        st.markdown("### Section Scores")
+        section_scores = result["result"].get("section_scores", {})
+        for section, scores in section_scores.items():
+            st.markdown(f"#### {section}")
+            st.markdown(scores)
 
-# Footer
-st.markdown("---")
-st.caption("Built with 🤖 by your AI Consultant.")
+        # Download file paths
+        markdown_path = result["result"]["markdown_download"]
+        pdf_path = result["result"]["pdf_download"]
+
+        # Preview and download buttons
+        with st.expander("🔍 Preview Markdown Report"):
+            with open(markdown_path, "r") as f:
+                st.code(f.read(), language="markdown")
+
+
+        if os.path.exists(markdown_path):
+            with open(markdown_path, "rb") as f:
+                st.download_button("⬇️ Download Markdown", f, file_name="consultant_ai_report.md")
+
+        if os.path.exists(pdf_path):
+            with open(pdf_path, "rb") as f:
+                st.download_button("⬇️ Download PDF", f, file_name="consultant_ai_report.pdf")
+        
+
+    elif result:
+        st.error(f"❌ {result['message']}")

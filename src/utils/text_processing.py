@@ -1,7 +1,7 @@
 # text_processing.py – Preprocessing, section parsing, normalization
 
 import difflib
-from models.openai_interface import call_openai_with_tracking
+from src.models.openai_interface import call_openai_with_tracking
 from src.utils.section_map import canonical_section_map
 
 def split_report_into_sections(report_text):

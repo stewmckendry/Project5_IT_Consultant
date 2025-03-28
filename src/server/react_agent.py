@@ -1,14 +1,15 @@
 # react_agent.py - Core class + reasoning loops
 
 import re
-from models.openai_interface import call_openai_with_tracking
-from models.section_tools_llm import auto_fill_gaps_with_research, check_recommendation_alignment, check_summary_support, evaluate_smart_goals, should_cite, upgrade_section_with_research
-from server.prompt_builders import build_tool_hints, format_tool_catalog_for_prompt
-from server.report_review_runner import summarize_and_score_section
-from utils.tools import tool_catalog
-from utils.tools.tools_basic import check_alignment_with_goals, check_guideline, check_timeline_feasibility, compare_with_other_section, generate_client_questions, highlight_missing_sections, keyword_match_in_section, search_report
-from utils.tools.tools_nlp import check_for_jargon
-from utils.tools.tools_web import search_web, should_search_arxiv
+from src.models.openai_interface import call_openai_with_tracking
+from src.models.section_tools_llm import auto_fill_gaps_with_research, check_recommendation_alignment, check_summary_support, evaluate_smart_goals, generate_final_summary, should_cite, upgrade_section_with_research
+from src.server.prompt_builders import build_tool_hints, format_tool_catalog_for_prompt
+from src.models.scoring import summarize_and_score_section
+from src.utils.tools.tool_catalog import tool_catalog
+from src.utils.tools.tools_basic import check_alignment_with_goals, check_guideline, check_timeline_feasibility, compare_with_other_section, generate_client_questions, highlight_missing_sections, keyword_match_in_section, search_report
+from src.utils.tools.tools_nlp import analyze_tone_textblob, check_for_jargon, check_readability, extract_named_entities
+from src.utils.tools.tools_reasoning import analyze_math_question, pick_tool_by_intent_fuzzy
+from src.utils.tools.tools_web import search_arxiv, search_serpapi, search_web, search_wikipedia, should_search_arxiv
 
 
 class ReActConsultantAgent:
@@ -195,7 +196,7 @@ def run_react_loop_check_withTool(agent, max_steps=5, report_sections=None):
             break
     
     # Summarize and store section notes, scores, fixes, confidence level, raw ouputs
-    summarize_and_score_section(agent)
+    summarize_and_score_section(agent, report_sections)
 
     # Return full reasoning history
     return agent.history
@@ -321,7 +322,7 @@ def dispatch_tool_action(agent, action, report_sections=None):
             match = re.match(r'search_wikipedia\["(.+?)"\]', action)
             if match:
                 query = match.group(1)
-                return wikipedia.run(query)
+                return search_wikipedia(query)
             else:
                 return "⚠️ Could not parse search_wikipedia action."
         elif action == "analyze_tone_textblob":

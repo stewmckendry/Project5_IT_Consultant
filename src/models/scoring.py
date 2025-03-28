@@ -1,7 +1,7 @@
 # scoring.py – Scoring, confidence, fix suggestions
 
-from models.openai_interface import call_openai_with_tracking
-
+from src.models.openai_interface import call_openai_with_tracking
+import re
 
 def score_section(section_name, section_text, goals_text=None, model="gpt-3.5-turbo", temperature=0.6):
     """
@@ -228,3 +228,24 @@ def format_score_block(score_text):
         return f"{icon} {line}"
     
     return "".join([add_icons(line) + "  \n" for line in score_text.splitlines()])
+
+
+def summarize_and_score_section(agent, report_sections):
+    section_name = agent.section_name
+    section_text = agent.section_text
+    goals_text = report_sections.get("Goals & Objectives", None)
+
+    # Summarize
+    agent.memory["section_notes"][section_name] = [summarize_section_insights(agent)]
+
+    # Score
+    agent.memory.setdefault("section_scores", {})[section_name] = score_section(section_name, section_text, goals_text)
+
+    # Confidence
+    agent.memory.setdefault("confidence_levels", {})[section_name] = get_confidence_level(agent)
+
+    # Fix suggestions
+    agent.memory.setdefault("section_fixes", {})[section_name] = recommend_fixes(agent)
+
+    # Debug notes
+    agent.memory.setdefault("debug_notes", {})[section_name] = agent.history

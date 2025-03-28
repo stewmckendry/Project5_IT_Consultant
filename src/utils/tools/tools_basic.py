@@ -2,8 +2,8 @@
 
 # Simulated best practices reference data
 import re
-from models.openai_interface import call_openai_with_tracking
-from utils.section_map import canonical_section_map
+from src.models.openai_interface import call_openai_with_tracking
+from src.utils.section_map import canonical_section_map
 
 
 best_practices = {

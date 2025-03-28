@@ -3,12 +3,13 @@
 # Tool to search the web for relevant information
 
 from duckduckgo_search import DDGS
-from models.openai_interface import call_openai_with_tracking
+from src.models.openai_interface import call_openai_with_tracking
 from serpapi import GoogleSearch  # Import GoogleSearch from SerpAPI
 from dotenv import load_dotenv
-from langchain.tools import SerpAPIWrapper  # Import SerpAPIWrapper
+from langchain_community.utilities import SerpAPIWrapper
 from langchain_community.tools import ArxivQueryRun # for querying ArXiv
 from langchain_community.utilities.arxiv import ArxivAPIWrapper # for querying ArXiv
+import re
 
 
 def search_web(query, max_results=1):
