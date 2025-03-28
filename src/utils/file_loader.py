@@ -1,5 +1,9 @@
 # file_loader.py – File input handling
 
+from pathlib import Path
+import docx # for Word documents
+import fitz # for PDFs
+
 def load_report_text_from_file(filepath):
     """
     Loads text from a supported file format (txt, md, docx, pdf).
@@ -13,7 +17,6 @@ def load_report_text_from_file(filepath):
         doc = docx.Document(filepath)
         return "\n".join([p.text for p in doc.paragraphs])
     elif ext == ".pdf":
-        import fitz  # PyMuPDF
         doc = fitz.open(filepath)
         return "\n".join([page.get_text() for page in doc])
     else:

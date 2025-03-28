@@ -39,7 +39,7 @@ def run_full_report_review(agent, report_sections, max_steps=5):
     for section_name, section_text in report_sections.items():
         agent.section_name = section_name
         agent.section_text = section_text
-        run_react_loop_check_withTool(agent, max_steps=max_steps)
+        run_react_loop_check_withTool(agent, max_steps=max_steps, report_sections=report_sections)
 
     # Post-processing steps
     agent.memory["highlight_missing"] = highlight_missing_sections(report_sections)

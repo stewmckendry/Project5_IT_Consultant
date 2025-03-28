@@ -1,5 +1,8 @@
 # scoring.py – Scoring, confidence, fix suggestions
 
+from models.openai_interface import call_openai_with_tracking
+
+
 def score_section(section_name, section_text, goals_text=None, model="gpt-3.5-turbo", temperature=0.6):
     """
     Scores a section of a consulting report based on clarity, alignment, and completeness.

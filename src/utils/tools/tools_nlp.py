@@ -2,6 +2,11 @@
 
 # Tool to check for jargon or technical terms in a section
 
+import re
+from textstat.textstat import textstat
+import spacy
+
+
 JARGON_LIST = {
     "synergy", "leverage", "optimize", "stakeholder alignment", "enablement",
     "digital transformation", "bandwidth", "scalability", "paradigm",
@@ -99,6 +104,8 @@ def analyze_tone_textblob(section_text):
         f"🧠 **Clarity**: {clarity} (subjectivity: {subjectivity:.2f})"
     )
 
+# Load the spaCy NLP model
+nlp = spacy.load("en_core_web_sm")
 
 def extract_named_entities(section_text):
     """

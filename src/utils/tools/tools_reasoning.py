@@ -4,6 +4,9 @@
 # This function picks tools from the tool catalog based on the intent description.
 # It searches through the tool catalog and returns a list of tools whose descriptions match the given intent description.
 
+from difflib import SequenceMatcher
+
+
 def pick_tool_by_intent(intent_description, tool_catalog):
     """
     Picks tools from the tool catalog based on the intent description.
@@ -124,13 +127,17 @@ def analyze_math_question(expression):
 
     Workflow:
     1. Receives a mathematical expression as input.
-    2. Calls the `run` method of the `llm_math` object to evaluate the expression.
+    2. Calls the `invoke` method of the `llm_math` object to evaluate the expression.
     3. If the evaluation is successful, returns the result.
     4. If an exception occurs during the evaluation, catches the exception and returns an error message.
 
     Returns:
     str: The result of the evaluated mathematical expression, or an error message if the evaluation fails.
     """
+    from langchain.chat_models import ChatOpenAI # for chaining models - chat
+    from langchain.chains import LLMMathChain # for chaining models - math
+    llm_math = LLMMathChain.from_llm(ChatOpenAI(temperature=0, model="gpt-3.5-turbo")) # temp = 0 ensures deterministic results (math precision)
+    
     try:
         result = llm_math.invoke(expression)
         return result

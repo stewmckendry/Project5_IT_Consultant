@@ -2,6 +2,15 @@
 
 # Tool to search the web for relevant information
 
+from duckduckgo_search import DDGS
+from models.openai_interface import call_openai_with_tracking
+from serpapi import GoogleSearch  # Import GoogleSearch from SerpAPI
+from dotenv import load_dotenv
+from langchain.tools import SerpAPIWrapper  # Import SerpAPIWrapper
+from langchain_community.tools import ArxivQueryRun # for querying ArXiv
+from langchain_community.utilities.arxiv import ArxivAPIWrapper # for querying ArXiv
+
+
 def search_web(query, max_results=1):
     """
     Searches the web for relevant information using DuckDuckGo.
@@ -33,7 +42,7 @@ def search_web(query, max_results=1):
         return f"⚠️ Web search failed: {str(e)}"
 
 
-def search_serpapi(query):    
+def search_serpapi(query, agent):    
     """
     Searches the web for relevant information using SerpAPI.
 
@@ -56,9 +65,15 @@ def search_serpapi(query):
     Returns:
     str: A formatted string containing the title, URL, and snippet of the top result, or a message indicating no results were found or an error occurred.
     """
+    serp_tool = SerpAPIWrapper(serpapi_api_key=serpapi_key)
+
     try:
-        results = serpapi.run(query)  # already returns a string summary
-        parsed_results = serpapi.results.get("organic_results", [])  # safely get result list
+        load_dotenv()
+        serpapi_key = os.getenv("SERPAPI_API_KEY")
+        serp_tool = SerpAPIWrapper(serpapi_api_key=serpapi_key)
+        
+        results = serp_tool.run(query)  # already returns a string summary
+        parsed_results = serp_tool.results.get("organic_results", [])  # safely get result list
 
         if parsed_results:
             top_result = parsed_results[0]  # Grab best result
@@ -108,7 +123,7 @@ def search_wikipedia(query):
         return f"⚠️ Wikipedia error: {str(e)}"
 
 
-def search_arxiv(query):    
+def search_arxiv(query, agent):    
     """
     Searches academic papers on arXiv for technical or scientific topics.
 
@@ -129,6 +144,8 @@ def search_arxiv(query):
     Returns:
     str: The search results from arXiv if successful, or an error message if the search fails.
     """
+    arxiv_tool = ArxivQueryRun(api_wrapper=ArxivAPIWrapper(load_max_docs=3))
+
     try:
         results = arxiv_tool.run(query)
         

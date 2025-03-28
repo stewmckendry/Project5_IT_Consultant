@@ -1,6 +1,11 @@
 # prompt_builders.py – Prompt construction & tool hinting
 
 # Helper to construct system + user messages for the reasoning agent
+from utils.text_processing import map_section_to_canonical
+from src.utils.tools.tool_catalog import tool_catalog, tool_priority_map, global_tools
+
+
+
 def build_review_prompt(report_text, history=[]):
     """
     Constructs system and user messages for the reasoning agent to review a consulting report.

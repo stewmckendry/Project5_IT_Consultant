@@ -1,5 +1,10 @@
 # export_utils.py – Report generation/export
 
+import os
+from models.openai_interface import call_openai_with_tracking
+from markdown import markdown
+
+
 def generate_final_summary(agent, model="gpt-3.5-turbo", temperature=0.7):
     """
     Generates a final summary for the client based on the agent's memory of section insights and cross-section observations.

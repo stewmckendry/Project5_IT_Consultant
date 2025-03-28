@@ -1,6 +1,11 @@
 # tools_basic.py – Basic report review tools
 
 # Simulated best practices reference data
+import re
+from models.openai_interface import call_openai_with_tracking
+from utils.section_map import canonical_section_map
+
+
 best_practices = {
     "cloud security": "Follow NIST Cybersecurity Framework. Include access control, encryption at rest/in-transit, and regular audits.",
     "data governance": "Establish data stewards, quality standards, lifecycle rules, and metadata documentation.",

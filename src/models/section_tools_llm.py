@@ -1,5 +1,11 @@
 # section_tools_llm.py – Advanced LLM-based section tools
 
+import re
+from models.openai_interface import call_openai_with_tracking
+from nltk.tokenize import sent_tokenize
+from utils.tools.tools_web import search_arxiv
+
+
 def check_summary_support(summary_text, other_sections):
     """
     Check if the summary reflects content from the rest of the report.

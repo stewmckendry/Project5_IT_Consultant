@@ -12,3 +12,4 @@ python-docx
 tiktoken
 arxiv
 serpapi
+nltk

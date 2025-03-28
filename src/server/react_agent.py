@@ -1,5 +1,16 @@
 # react_agent.py - Core class + reasoning loops
 
+import re
+from models.openai_interface import call_openai_with_tracking
+from models.section_tools_llm import auto_fill_gaps_with_research, check_recommendation_alignment, check_summary_support, evaluate_smart_goals, should_cite, upgrade_section_with_research
+from server.prompt_builders import build_tool_hints, format_tool_catalog_for_prompt
+from server.report_review_runner import summarize_and_score_section
+from utils.tools import tool_catalog
+from utils.tools.tools_basic import check_alignment_with_goals, check_guideline, check_timeline_feasibility, compare_with_other_section, generate_client_questions, highlight_missing_sections, keyword_match_in_section, search_report
+from utils.tools.tools_nlp import check_for_jargon
+from utils.tools.tools_web import search_web, should_search_arxiv
+
+
 class ReActConsultantAgent:
     """
     A class to review sections of an IT consulting report using the ReAct (Reason + Act) framework with OpenAI's ChatCompletion API.
@@ -112,7 +123,7 @@ class ReActConsultantAgent:
             return [{"role": "user", "content": base_prompt}]
 
 
-def run_react_loop_check_withTool(agent, max_steps=5):
+def run_react_loop_check_withTool(agent, max_steps=5, report_sections=None):
     """
     Runs the ReAct (Reason + Act) loop for a specified number of steps.
 
@@ -155,7 +166,7 @@ def run_react_loop_check_withTool(agent, max_steps=5):
             break
 
         # Generate observation based on action
-        observation = dispatch_tool_action(agent, action)
+        observation = dispatch_tool_action(agent, action, report_sections=report_sections)
 
         # Track tool history
         agent.memory["tool_history"].append((step_num, action, agent.section_name))
@@ -218,7 +229,7 @@ def run_single_react_step(agent, thought, action, step_num=0):
     return observation
 
 
-def dispatch_tool_action(agent, action):
+def dispatch_tool_action(agent, action, report_sections=None):
     """
     Purpose:
         Dispatches a tool action based on the provided action string and executes the corresponding function.
@@ -319,7 +330,7 @@ def dispatch_tool_action(agent, action):
             match = re.match(r'search_serpapi\["(.+?)"\]', action)
             if match:
                 query = match.group(1)
-                return search_serpapi(query)
+                return search_serpapi(query, agent)
             else:
                 return "⚠️ Could not parse search_serpapi action."
         elif action == "extract_named_entities":
@@ -335,7 +346,7 @@ def dispatch_tool_action(agent, action):
             match = re.match(r'search_arxiv\["(.+?)"\]', action)
             if match:
                 query = match.group(1)
-                return search_arxiv(query)
+                return search_arxiv(query, agent)
             else:
                 return "⚠️ Could not parse search_arxiv action."
         elif action == "auto_check_for_academic_support":
@@ -343,7 +354,7 @@ def dispatch_tool_action(agent, action):
             if needs_citation:
                 # Automatically create and run an arxiv search
                 followup_action = f'search_arxiv["{agent.section_name}"]'
-                followup_obs = dispatch_tool_action(agent, followup_action)
+                followup_obs = dispatch_tool_action(agent, followup_action, report_sections)
                 # Log follow-up to memory
                 agent.memory.setdefault("academic_support", {})[agent.section_name] = {
                     "reason": reason,

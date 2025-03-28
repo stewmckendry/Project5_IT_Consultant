@@ -1,11 +1,13 @@
 # openai_interface.py –  Handles all OpenAI API interactions
 
-# Track total tokens used and estimated cost
-total_tokens_used = 0
-estimated_cost_usd = 0.0
+import os
+from openai import OpenAI
+from dotenv import load_dotenv
 
-# Cost per 1K tokens for GPT-3.5-turbo (adjust if using GPT-4)
-COST_PER_1K_TOKENS = 0.0015
+# Load the OpenAI API key from .env file and create client instance
+load_dotenv()
+my_openai_api_key=os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=my_openai_api_key)
 
 def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, max_tokens=500):
     """
@@ -28,6 +30,10 @@ def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, 
     str: The content of the first choice from the API response.
     """
     global total_tokens_used, estimated_cost_usd
+
+    total_tokens_used = 0
+    estimated_cost_usd = 0.0
+    COST_PER_1K_TOKENS = 0.0015
 
     try:
         response = client.chat.completions.create(

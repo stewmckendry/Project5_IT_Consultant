@@ -1,5 +1,9 @@
 # text_processing.py – Preprocessing, section parsing, normalization
 
+import difflib
+from models.openai_interface import call_openai_with_tracking
+from src.utils.section_map import canonical_section_map
+
 def split_report_into_sections(report_text):
     """
     Splits a report into sections based on headers.
@@ -144,19 +148,4 @@ def guess_canonical_section_with_llm(label, model="gpt-3.5-turbo", temperature=0
         # Try fuzzy match if response is slightly off (e.g., "Implementation Timeline")
         return difflib.get_close_matches(cleaned, canonical_names, n=1, cutoff=0.6)[0] if difflib.get_close_matches(cleaned, canonical_names) else None
     
-
-# Define the canonical section map for mapping section names to canonical names (similar to the tool catalog)
-canonical_section_map = {
-    "Introduction": ["header", "intro", "project context", "introduction", "overview"],
-    "Summary": ["summary", "executive summary"],
-    "Goals & Objectives": ["goals", "objectives", "strategic priorities"],
-    "Current State Assessment": ["current state", "as-is", "status quo"],
-    "Future State": ["future state", "to-be", "vision", "target state"],
-    "Key Recommendations": ["recommendations", "our recommendations", "next steps"],
-    "Implementation Plan": ["implementation plan", "roadmap", "deployment", "schedule", "timeline", "phasing"],
-    "Benefits": ["benefits", "value", "expected outcomes"],
-    "Costs": ["costs", "financials", "budget", "investment"],
-    "Resources": ["resources", "team structure", "staffing", "governance"],
-    "Risks & Mitigations": ["risks", "mitigations", "risk mitigation"]
-}
 
