@@ -5,6 +5,7 @@ from src.models.openai_interface import call_openai_with_tracking
 from markdown import markdown
 from playwright.async_api import async_playwright
 from src.models.scoring import format_score_block
+import re
 
 
 def generate_final_summary(agent, model="gpt-3.5-turbo", temperature=0.7):

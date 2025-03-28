@@ -10,7 +10,7 @@ from src.utils.tools.tools_basic import check_alignment_with_goals, check_guidel
 from src.utils.tools.tools_nlp import analyze_tone_textblob, check_for_jargon, check_readability, extract_named_entities
 from src.utils.tools.tools_reasoning import analyze_math_question, pick_tool_by_intent_fuzzy
 from src.utils.tools.tools_web import search_arxiv, search_serpapi, search_web, search_wikipedia, should_search_arxiv
-
+from src.server.prompt_builders import build_tool_selection_prompt_rfpeval
 
 class ReActConsultantAgent:
     """
@@ -405,4 +405,12 @@ def dispatch_tool_action(agent, action, report_sections=None):
             return "Unrecognized action."
     except Exception as e:
         return f"⚠️ Tool execution error: {str(e)}"
-        
+
+
+def select_best_tool_with_llm(agent, criterion, top_thoughts, model="gpt-3.5-turbo"):
+    messages = build_tool_selection_prompt_rfpeval(agent, criterion, top_thoughts)
+    response = call_openai_with_tracking(messages, model=model, temperature=0)
+
+    # Clean and return tool action string
+    return response.strip().splitlines()[0]  # Example: check_guideline["cloud"]
+

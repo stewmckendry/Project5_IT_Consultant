@@ -65,7 +65,6 @@ def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, 
     estimated_cost_usd += (total / 1000) * COST_PER_1K_TOKENS
 
     # Logging
-    print(f"🔢 Prompt: {prompt_tokens} tokens | Completion: {completion_tokens} tokens | Total so far: {total_tokens_used} tokens")
-    print(f"💰 Estimated cost so far: ${estimated_cost_usd:.4f} USD")
+    print(f"🔢 Prompt: {prompt_tokens} tokens | Completion: {completion_tokens} tokens | Cost: ${estimated_cost_usd:.4f} USD")
 
     return response.choices[0].message.content.strip()

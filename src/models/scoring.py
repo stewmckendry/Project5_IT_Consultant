@@ -230,10 +230,14 @@ def format_score_block(score_text):
     return "".join([add_icons(line) + "  \n" for line in score_text.splitlines()])
 
 
-def summarize_and_score_section(agent, report_sections):
+def summarize_and_score_section(agent, report_sections=None):
     section_name = agent.section_name
     section_text = agent.section_text
-    goals_text = report_sections.get("Goals & Objectives", None)
+    
+    if report_sections:
+        goals_text = report_sections.get("Goals & Objectives", None)
+    else:   
+        goals_text = "No goals extracted."
 
     # Summarize
     agent.memory["section_notes"][section_name] = [summarize_section_insights(agent)]
