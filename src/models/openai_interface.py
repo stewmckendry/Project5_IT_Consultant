@@ -1,11 +1,4 @@
-# utils/openai_utils.py
-
-import openai
-import os
-
-# Load key from env or define manually for local use
-openai.api_key = os.getenv("OPENAI_API_KEY")
-client = openai
+# openai_interface.py –  Handles all OpenAI API interactions
 
 # Track total tokens used and estimated cost
 total_tokens_used = 0

@@ -1,52 +1,57 @@
+# streamline_app.py – client-facing Streamlit app
+
 import streamlit as st
-from pathlib import Path
-from docx import Document
-import fitz  # PyMuPDF for PDFs
+from src.utils.file_loader import load_report_text_from_file
+from src.utils.text_processing import split_report_into_sections
+from src.server.report_review_runner import run_full_report_review
+from src.utils.export_utils import export_report_to_markdown_and_pdf
 
-from utils.report_utils import split_report_into_sections
-from utils.agent import ReActConsultantAgent
-from utils.openai_utils import call_openai_with_tracking
-from utils.report_utils import run_react_loop_check_withTool, export_report_to_markdown
+# App title and description
+st.set_page_config(page_title="AI Consulting Report Reviewer", layout="wide")
+st.title("📊 AI-Powered Consulting Report Reviewer")
+st.markdown("Upload a consulting report and let the AI analyze each section for clarity, alignment, completeness, and more.")
 
-st.set_page_config(page_title="Consultant AI", layout="wide")
-st.title("🧠 AI-Powered Report Reviewer")
-st.markdown("Upload a consulting report and get expert-level review, insights, scoring, and recommendations.")
+# File uploader
+uploaded_file = st.file_uploader("Upload your consulting report (TXT, PDF, or DOCX)", type=["txt", "pdf", "docx"])
 
-uploaded_file = st.file_uploader("Upload a report (PDF, Word, or Markdown)", type=["pdf", "docx", "md"])
+# Processing options
+max_steps = st.slider("Number of ReAct steps per section", min_value=1, max_value=10, value=5)
+run_button = st.button("🔍 Run AI Review")
 
-def extract_text_from_file(file):
-    if file.name.endswith(".pdf"):
-        pdf = fitz.open(stream=file.read(), filetype="pdf")
-        return "\n".join([page.get_text() for page in pdf])
-    elif file.name.endswith(".docx"):
-        doc = Document(file)
-        return "\n".join([para.text for para in doc.paragraphs])
-    elif file.name.endswith(".md"):
-        return file.read().decode("utf-8")
-    return ""
+# Run review
+if run_button and uploaded_file:
+    with st.spinner("Processing your report with AI..."):
+        # Step 1: Load report text
+        report_text = load_report_text_from_file(uploaded_file)
 
-if uploaded_file:
-    raw_text = extract_text_from_file(uploaded_file)
-    st.subheader("📄 Report Preview")
-    st.text_area("Raw Report Content", raw_text[:2000] + "...", height=200)
+        # Step 2: Split into sections
+        report_sections = split_report_into_sections(report_text)
 
-    if st.button("🤖 Run AI Review"):
-        with st.spinner("Thinking..."):
-            report_sections = split_report_into_sections(raw_text)
-            agent = ReActConsultantAgent(section_name="Full Report", section_text="")
+        # Step 3: Run full ReAct loop
+        agent = run_full_report_review(report_sections, max_steps=max_steps)
 
-            for name, text in report_sections.items():
-                agent.section_name = name
-                agent.section_text = text
-                run_react_loop_check_withTool(agent, max_steps=5)
+        # Step 4: Export report
+        export_report_to_markdown_and_pdf(agent)
 
-            final_summary = agent.memory.get("final_summary", "No summary generated.")
-            st.subheader("✅ Final Summary")
-            st.markdown(final_summary)
+        st.success("✅ AI review complete! Report exported to Markdown and PDF.")
+        st.markdown("---")
+        st.markdown("📄 Download your outputs below:")
 
-            md_file = "consultant_ai_report.md"
-            export_report_to_markdown(agent, filename=md_file)
-            st.success("📄 Report exported to Markdown.")
+        # Show download links
+        st.download_button(
+            label="📥 Download Markdown Report",
+            data=open("Outputs/consultant_ai_report.md", "rb").read(),
+            file_name="consultant_ai_report.md",
+            mime="text/markdown"
+        )
 
-            with open(md_file, "r") as f:
-                st.download_button("⬇️ Download Markdown", f.read(), file_name="Consultant_Report.md")
+        st.download_button(
+            label="📥 Download PDF Report",
+            data=open("Outputs/consultant_ai_report.pdf", "rb").read(),
+            file_name="consultant_ai_report.pdf",
+            mime="application/pdf"
+        )
+
+# Footer
+st.markdown("---")
+st.caption("Built with 🤖 by your AI Consultant.")
