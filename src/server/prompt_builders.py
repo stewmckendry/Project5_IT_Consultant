@@ -2,7 +2,7 @@
 
 # Helper to construct system + user messages for the reasoning agent
 from src.utils.text_processing import map_section_to_canonical
-from src.utils.tools.tool_catalog import tool_catalog, tool_priority_map, global_tools
+from src.utils.tools.tool_catalog import tool_catalog, tool_priority_map, global_tools, criterion_tool_map
 
 
 
@@ -111,6 +111,29 @@ def format_tool_catalog_for_prompt(tool_catalog):
         lines.append("")  # spacing between tools
     return "\n".join(lines)
 
+def format_tool_hints_for_prompt(selected_tool_names, tool_catalog):
+    """
+    Formats a list of selected tools into a prompt-friendly string, including usage format.
+
+    Parameters:
+    - selected_tool_names (list): List of tool names to prioritize.
+    - tool_catalog (dict): The full tool catalog with descriptions and usage examples.
+
+    Returns:
+    - str: A formatted string suitable for prompt inclusion.
+    """
+    lines = []
+    for tool in selected_tool_names:
+        meta = tool_catalog.get(tool)
+        if not meta:
+            continue
+        lines.append(f"• {tool} – {meta['description']}")
+        lines.append(f"  Usage: {meta['usage']}")
+        if meta.get("examples"):
+            lines.append(f"  Example: {meta['examples'][0]}")
+        lines.append("")  # spacing between tools
+    return "\n".join(lines)
+
 
 def build_tool_selection_prompt_rfpeval(agent, criterion, top_thoughts):
     """
@@ -136,8 +159,7 @@ Available Tools:
 Choose the most useful tool to evaluate the proposal on this criterion.
 Respond with only the tool name and input, like:
     check_readability
-    check_guideline["data governance"]
+    check_guideline_dynamic["data governance"]
     search_web["cloud security best practices"]
 """
     return [{"role": "user", "content": prompt}]
-

@@ -290,3 +290,55 @@ tool_priority_map = {
         "optional": ["check_guideline"]
     }
 }
+
+# Map of priority tools by evaluation criterion for RFP evaluation
+criterion_tool_map = {
+    "Solution Fit": [
+        "check_alignment_with_goals",
+        "generate_client_questions",
+        "search_serpapi",
+        "flag_risk",
+        "recommend_fix",
+    ],
+    "Technical Architecture": [
+        "search_arxiv",
+        "check_guideline",
+        "recommend_fix",
+        "check_readability",
+        "search_serpapi",
+    ],
+    "Cost": [
+        "analyze_math_question",
+        "flag_risk",
+        "should_cite",
+        "search_serpapi",
+    ],
+    "Implementation Timeline": [
+        "check_timeline_feasibility",
+        "search_serpapi",
+        "generate_client_questions",
+        "flag_risk",
+    ],
+    "Vendor Experience": [
+        "should_cite",
+        "search_serpapi",
+        "generate_client_questions",
+        "extract_named_entities",
+        "check_for_jargon"
+    ],
+    "Risk Management": [
+        "flag_risk",
+        "auto_fill_gaps_with_research",
+        "recommend_fix",
+        "search_arxiv",
+        "search_serpapi"
+    ],
+    "Vendor Team": [  # ✅ New Criterion
+        "extract_named_entities",
+        "should_cite",
+        "generate_client_questions",
+        "check_for_jargon",
+        "search_serpapi"
+    ]
+}
+

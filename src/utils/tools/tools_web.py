@@ -10,7 +10,7 @@ from langchain_community.utilities import SerpAPIWrapper
 from langchain_community.tools import ArxivQueryRun # for querying ArXiv
 from langchain_community.utilities.arxiv import ArxivAPIWrapper # for querying ArXiv
 import re
-
+import os
 
 def search_web(query, max_results=1):
     """
@@ -66,13 +66,13 @@ def search_serpapi(query, agent):
     Returns:
     str: A formatted string containing the title, URL, and snippet of the top result, or a message indicating no results were found or an error occurred.
     """
+    serpapi_key = os.getenv("SERPAPI_KEY", None)
+    if not serpapi_key:
+        raise ValueError("Missing SerpAPI key.")
     serp_tool = SerpAPIWrapper(serpapi_api_key=serpapi_key)
-
-    try:
-        load_dotenv()
-        serpapi_key = os.getenv("SERPAPI_API_KEY")
-        serp_tool = SerpAPIWrapper(serpapi_api_key=serpapi_key)
         
+    try:
+        # Perform the search using SerpAPI
         results = serp_tool.run(query)  # already returns a string summary
         parsed_results = serp_tool.results.get("organic_results", [])  # safely get result list
 

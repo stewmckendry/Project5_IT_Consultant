@@ -6,11 +6,16 @@ from src.models.section_tools_llm import auto_fill_gaps_with_research, check_rec
 from src.server.prompt_builders import build_tool_hints, format_tool_catalog_for_prompt
 from src.models.scoring import summarize_and_score_section
 from src.utils.tools.tool_catalog import tool_catalog
-from src.utils.tools.tools_basic import check_alignment_with_goals, check_guideline, check_timeline_feasibility, compare_with_other_section, generate_client_questions, highlight_missing_sections, keyword_match_in_section, search_report
+from src.utils.tools.tools_basic import check_alignment_with_goals, check_guideline_dynamic, check_timeline_feasibility, compare_with_other_section, generate_client_questions, highlight_missing_sections, keyword_match_in_section, search_report
 from src.utils.tools.tools_nlp import analyze_tone_textblob, check_for_jargon, check_readability, extract_named_entities
 from src.utils.tools.tools_reasoning import analyze_math_question, pick_tool_by_intent_fuzzy
 from src.utils.tools.tools_web import search_arxiv, search_serpapi, search_web, search_wikipedia, should_search_arxiv
 from src.server.prompt_builders import build_tool_selection_prompt_rfpeval
+from src.utils.tools.tool_embeddings import suggest_tools_by_embedding
+from src.models.openai_embeddings import get_openai_embedding  # used internally by suggest_tools...
+#from src.utils.text_processing import truncate_text  # Optional
+from src.utils.tools.tool_hints import build_tool_hints_for_rfp_eval_embedding, build_tool_hint_text_forRFPeval  # new helper
+
 
 class ReActConsultantAgent:
     """
@@ -33,7 +38,7 @@ class ReActConsultantAgent:
         Builds a prompt for the ReAct framework based on the section text and history.
     """
 
-    def __init__(self, section_name, section_text, model="gpt-3.5-turbo", temperature=0.7):
+    def __init__(self, section_name, section_text, model="gpt-3.5-turbo", temperature=0.7, initial_thought=None):
         """
         Initializes the ReActConsultantAgent with the given section name, section text, model, and temperature.
 
@@ -47,6 +52,7 @@ class ReActConsultantAgent:
         self.section_text = section_text
         self.model = model
         self.temperature = temperature
+        self.initial_thought = initial_thought  # ✅ NEW: Starting thought from ToT
         self.history = []
         self.tool_usage = {}  # {action_name: count}
         self.memory = {
@@ -76,6 +82,10 @@ class ReActConsultantAgent:
             f"Here is the section content:\n{self.section_text}\n\n"
         )
 
+        # ✅ Seed with ToT-generated initial thought (if provided)
+        if self.initial_thought and len(self.history) == 0:
+            base_prompt += f"Thought: {self.initial_thought}\n"
+
         for step in self.history:
             base_prompt += f"Thought: {step['thought']}\n"
             base_prompt += f"Action: {step['action']}\n"
@@ -88,6 +98,7 @@ class ReActConsultantAgent:
     def build_react_prompt_withTools(self):
             """
             Builds a prompt for the ReAct framework based on the section text and history.
+            This prompt is for reviewing a IT report.
 
             Workflow:
             1. Constructs a base prompt with the section name and text.
@@ -122,6 +133,58 @@ class ReActConsultantAgent:
             base_prompt += "What is your next Thought and Action?"
 
             return [{"role": "user", "content": base_prompt}]
+    
+    
+    def build_react_prompt_forRFPeval(self, criterion, proposal_text, thoughts=None, tool_embeddings=None):
+        """
+        Builds a ReAct-style prompt for evaluating a vendor proposal using a specific RFP criterion.
+
+        Parameters:
+            criterion (str): The RFP evaluation criterion (e.g., "Solution Fit").
+            proposal_text (str): Full proposal text (or relevant excerpt).
+            thoughts (list): Top thoughts generated from Tree of Thought (optional).
+            tool_embeddings (dict): Cached embeddings for tool catalog (required).
+        """
+        self.section_name = criterion
+        self.section_text = proposal_text
+
+        # Generate embedding-based tool hints
+        if tool_embeddings:
+            tool_hint_text, tools_to_focus = build_tool_hints_for_rfp_eval_embedding(
+                criterion=criterion,
+                proposal_text=proposal_text,
+                thoughts=thoughts,
+                tool_embeddings=tool_embeddings
+            )
+        else:
+            tool_hint_text = build_tool_hint_text_forRFPeval(criterion)  # if no embeddings, use static hints from criterion_tool_map
+
+        # Build the base prompt
+        thoughts_text = "\n".join(thoughts) if thoughts else "[Start your own reasoning]"
+        base_prompt = (
+            f"You are a technology advisor reviewing a vendor proposal for a client RFP.\n\n"
+            f"📝 Criterion: {criterion}\n\n"
+            f"The client cares about cost-effectiveness, performance, security, trust, and ease of implementation.\n\n"
+            f"Start from the following evaluation question:\n"
+            f"{thoughts_text}\n\n"
+            f"Format your response:\n"
+            f"Thought: <your reasoning>\n"
+            f"Action: <choose ONE tool from the list below>\n\n"
+            f"⭐ Top tools for this task:\n{tool_hint_text}\n\n"
+            f"🧰 Full tool catalog:\n{format_tool_catalog_for_prompt(tool_catalog)}\n\n"
+            f"📄 Proposal:\n{self.section_text}\n\n"
+        )
+
+        for step in self.history:
+            base_prompt += f"Thought: {step['thought']}\n"
+            base_prompt += f"Action: {step['action']}\n"
+            base_prompt += f"Observation: {step['observation']}\n\n"
+
+        base_prompt += "What is your next Thought and Action?"
+
+        return [{"role": "user", "content": base_prompt}]
+
+
 
 
 def run_react_loop_check_withTool(agent, max_steps=5, report_sections=None):
@@ -250,11 +313,24 @@ def dispatch_tool_action(agent, action, report_sections=None):
         str: The result of the executed tool action or an error message if an exception occurs.
     """
     print(f"🛠️ Tool action: {action}")
+
+    # Check if the action matches the format of a known tool
+    known_tool_names = list(tool_catalog.keys())
+    recognized = False
+
+    for tool in known_tool_names:
+        if action.startswith(tool):
+            recognized = True
+            break
+
+    if not recognized:
+        return f"⚠️ Unrecognized action: {action}. Please check the action format or choose a valid tool."
+
     try:
         if action.startswith("check_guideline"):
             match = re.match(r'check_guideline\["(.+?)"\]', action)
             if match:
-                return check_guideline(match.group(1))
+                return check_guideline_dynamic(match.group(1),agent)
         elif action.startswith("keyword_match_in_section"):
             match = re.match(r'keyword_match_in_section\["(.+?)"\]', action)
             if match:
@@ -294,8 +370,11 @@ def dispatch_tool_action(agent, action, report_sections=None):
         elif action.startswith("check_recommendation_alignment"):
             match = re.match(r'check_recommendation_alignment\["(.+?)"\]', action)
             if match:
-                goals = report_sections.get("Goals & Objectives", "")
-                return check_recommendation_alignment(match.group(1), goals)
+                if report_sections is None:
+                    return "⚠️ Cannot check alignment — full report context not available."
+                else:
+                    goals = report_sections.get("Goals & Objectives", "")
+                    return check_recommendation_alignment(match.group(1), goals)
         elif action == "ask_question":
             return "Good question to ask the client for clarification."
         elif action == "flag_risk":
@@ -349,7 +428,9 @@ def dispatch_tool_action(agent, action, report_sections=None):
                 query = match.group(1)
                 return search_arxiv(query, agent)
             else:
-                return "⚠️ Could not parse search_arxiv action."
+                # Fallback for poorly formatted call
+                query = action.replace("search_arxiv", "").strip(" -:\"")
+                return search_arxiv(query, agent)
         elif action == "auto_check_for_academic_support":
             needs_citation, reason = should_search_arxiv(agent.section_text)
             if needs_citation:
@@ -402,7 +483,7 @@ def dispatch_tool_action(agent, action, report_sections=None):
 
             return observation
         else:
-            return "Unrecognized action."
+            return f"⚠️ Unrecognized action: {action}. Please check the action format."
     except Exception as e:
         return f"⚠️ Tool execution error: {str(e)}"
 
@@ -414,3 +495,57 @@ def select_best_tool_with_llm(agent, criterion, top_thoughts, model="gpt-3.5-tur
     # Clean and return tool action string
     return response.strip().splitlines()[0]  # Example: check_guideline["cloud"]
 
+
+def run_react_loop_for_rfp_eval(agent, criterion, proposal_text, thoughts=None, tool_embeddings=None, report_sections=None, max_steps=4):
+    """
+    Runs a ReAct loop for RFP evaluation using the new embedding-based prompt builder.
+
+    Parameters:
+        agent (ReActConsultantAgent): The agent initialized with section_name and section_text.
+        criterion (str): The evaluation criterion (e.g., "Solution Fit").
+        proposal_text (str): Full text of the vendor proposal.
+        thoughts (list): Tree of Thought-generated reasoning paths (optional).
+        tool_embeddings (dict): Cached tool embeddings.
+        max_steps (int): Number of ReAct iterations to run.
+
+    Returns:
+        list of step dictionaries with thought, action, observation.
+    """
+    for step_num in range(max_steps):
+        messages = agent.build_react_prompt_forRFPeval(
+            criterion=criterion,
+            proposal_text=proposal_text,
+            thoughts=thoughts,
+            tool_embeddings=tool_embeddings
+        )
+
+        # Run LLM
+        response = call_openai_with_tracking(messages, model=agent.model, temperature=agent.temperature)
+
+        # Parse response
+        try:
+            lines = response.strip().split("\n")
+            thought = next(line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("thought"))
+            action = next(line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("action"))
+            print(f"\n🔁 Step {step_num + 1}")
+            print(f"🧠 Thought: {thought}")
+            print(f"⚙️ Action: {action}")
+        except Exception as e:
+            print(f"⚠️ Failed to parse step {step_num + 1}: {str(e)}")
+            break
+
+        # Run tool
+        observation = dispatch_tool_action(agent, action, report_sections=report_sections)
+        print(f"👀 Observation: {observation}")
+
+        # Store in agent history
+        agent.history.append({
+            "thought": thought,
+            "action": action,
+            "observation": observation
+        })
+
+        if action == "summarize":
+            break
+
+    return agent.history

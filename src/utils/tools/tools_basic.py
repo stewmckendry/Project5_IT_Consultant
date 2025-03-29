@@ -4,6 +4,7 @@
 import re
 from src.models.openai_interface import call_openai_with_tracking
 from src.utils.section_map import canonical_section_map
+from src.utils.tools.tools_web import search_wikipedia, search_serpapi, search_arxiv
 
 
 best_practices = {
@@ -32,6 +33,66 @@ def check_guideline(topic):
     str: The best practice guideline for the specified topic, or a message indicating no matching guideline was found.
     """
     return best_practices.get(topic.lower(), "No matching guideline found.")
+
+
+def check_guideline_dynamic(topic, agent):
+    """
+    Dynamically checks for guidelines on a given topic using public knowledge sources
+    (Wikipedia → SerpAPI → arXiv), then summarizes using LLM.
+
+    Parameters:
+    topic (str): The topic to search for.
+    agent (ReActConsultantAgent): The agent instance (used for memory and arXiv fallback).
+
+    Returns:
+    str: A summarized set of best practices or guidance based on public sources.
+    """
+    content = ""
+    source = ""
+
+    # Try Wikipedia
+    try:
+        wiki_result = search_wikipedia(topic)
+        if wiki_result and "⚠️" not in wiki_result:
+            content = wiki_result
+            source = "Wikipedia"
+    except Exception as e:
+        pass
+
+    # If Wikipedia fails, try SerpAPI
+    if not content:
+        try:
+            serp_result = search_serpapi(topic)
+            if serp_result and "⚠️" not in serp_result:
+                content = serp_result
+                source = "SerpAPI"
+        except Exception as e:
+            pass
+
+    # If SerpAPI fails, try arXiv
+    if not content:
+        try:
+            arxiv_result = search_arxiv(topic, agent)
+            if arxiv_result and "⚠️" not in arxiv_result:
+                content = arxiv_result
+                source = "arXiv"
+        except Exception as e:
+            return f"⚠️ Failed to find guidance from any public source. Error: {str(e)}"
+
+    if not content:
+        return f"⚠️ No guidance found for '{topic}' from Wikipedia, SerpAPI, or arXiv."
+
+    # Summarize the content into clear guidance using LLM
+    summary_prompt = [
+        {
+            "role": "user",
+            "content": f"Summarize any relevant best practices or guidelines for the topic:\n\n{topic}\n\nBased on the following source ({source}):\n\n{content}"
+        }
+    ]
+    summary = call_openai_with_tracking(summary_prompt, model=agent.model)
+
+    return f"✅ Sourced from {source}:\n\n{summary}"
+
 
 
 def keyword_match_in_section(term, section_text):
