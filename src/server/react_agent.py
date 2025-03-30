@@ -535,7 +535,12 @@ def run_react_loop_for_rfp_eval(agent, criterion, proposal_text, thoughts=None, 
             break
 
         # Run tool
-        observation = dispatch_tool_action(agent, action, report_sections=report_sections)
+        try:
+            observation = dispatch_tool_action(agent, action, report_sections=report_sections)
+            if observation is None:
+                observation = "⚠️ Tool returned no result."
+        except Exception as e:
+            observation = f"⚠️ Tool execution error: {e}"
         print(f"👀 Observation: {observation}")
 
         # Store in agent history
