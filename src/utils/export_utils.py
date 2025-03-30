@@ -473,7 +473,7 @@ def export_proposal_report(vendor_name, results, overall_score, swot_summary, ou
     """
     # 1. Export Markdown
     markdown_path = export_proposal_report_to_markdown(
-        vendor_name, results, overall_score, swot_summary, output_dir
+        results, overall_score, swot_summary, proposal_name=vendor_name, output_dir=output_dir
     )
 
     # 2. Convert to HTML and PDF
@@ -512,7 +512,7 @@ def save_markdown_and_pdf(markdown_text, additional_md, filename, output_dir="ou
         f.write(full_report)
 
     # Convert markdown to HTML
-    raw_html = markdown(markdown_text, output_format="html5")
+    raw_html = markdown(full_report, output_format="html5")
     html_content = inject_html_style(raw_html)  # uses existing style injection
 
     # Save .html file

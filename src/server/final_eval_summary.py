@@ -14,11 +14,12 @@ def generate_final_comparison_summary(all_vendor_evaluations, model="gpt-3.5-tur
 
     # Build a comparison table
     rows = []
-    for eval in all_vendor_evaluations:
-        row = {"Vendor": eval["vendor_name"]}
-        for r in eval["results"]:
+    for eval_data in all_vendor_evaluations:
+        vendor_name = eval_data["vendor_name"]
+        row = {"Vendor": vendor_name}
+        for r in eval_data["results"]:
             row[r["criterion"]] = r["proposal_score"]
-        row["Overall"] = eval["overall_score"]
+        row["Overall"] = eval_data["overall_score"]
         rows.append(row)
 
     df = pd.DataFrame(rows)
