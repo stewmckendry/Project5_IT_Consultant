@@ -1,0 +1,5 @@
+Vendor A proposes a modular, cloud-native EHR platform designed for scalability and ease of integration. The platform supports configurable workflows, role-based access control, FHIR interoperability, and integration with provincial health registries. The system includes built-in audit trails and customizable dashboards for clinical decision support.
+
+Implementation is structured as a phased 18-month rollout. Phase 1 will onboard primary care clinics, followed by specialty care modules in Phase 2. Vendor A includes hosting, support, and system upgrades in the pricing model but assumes the client will handle data migration and end-user training. The solution is deployed in AWS Canada with regional failover capability and conforms to ISO 27001 and SOC 2 standards.
+
+Vendor A has implemented similar platforms in Ontario and Alberta with reported satisfaction scores over 85%. However, case studies and detailed metrics are not included in the proposal. The pricing model is based on tiered user volume, starting at $20/user/month for under 500 users. No information is provided on cost escalation or exit clauses.

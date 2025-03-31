@@ -1,0 +1,21 @@
+Request for Proposals – Evaluation Criteria for Electronic Health Record (EHR) Modernization
+
+The following criteria will be used to evaluate vendor submissions for the design, implementation, and support of a modernized Electronic Health Record (EHR) system. Proposals will be assessed on both qualitative and quantitative measures. Each criterion is weighted equally unless otherwise noted.
+
+1. Solution Fit
+The degree to which the proposed EHR platform meets the functional and non-functional requirements specified in the RFP. This includes configurability, modularity, clinical workflow alignment, and support for both primary and specialty care.
+
+2. Technical Architecture
+Assessment of the proposed system architecture, including modular design, scalability, interoperability (e.g., HL7/FHIR), security, performance, and alignment with industry best practices for healthcare IT.
+
+3. Cost
+Evaluation of total cost of ownership, including licensing, implementation, maintenance, support, data migration, and training. Transparency of pricing model, scalability of costs, and any hidden fees will be reviewed.
+
+4. Implementation Timeline
+Feasibility of the proposed implementation plan, including phases, milestones, resources, and dependencies. Consideration will be given to vendor capacity, risk mitigation strategies, and past delivery performance.
+
+5. Vendor Experience
+Experience and track record of the vendor in delivering similar solutions in healthcare environments. References, case studies, certifications, and qualifications of key team members will be taken into account.
+
+6. Risk Management
+Identification and mitigation of key project risks including data security, privacy, compliance (e.g., HIPAA/PHIPA), system availability, and vendor lock-in. Proposals should include a risk register and risk response plan.
