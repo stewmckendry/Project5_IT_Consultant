@@ -7,13 +7,13 @@ from src.utils.section_map import canonical_section_map
 from src.utils.tools.tools_web import search_wikipedia, search_serpapi, search_arxiv
 
 
-best_practices = {
+best_practices_archived = {
     "cloud security": "Follow NIST Cybersecurity Framework. Include access control, encryption at rest/in-transit, and regular audits.",
     "data governance": "Establish data stewards, quality standards, lifecycle rules, and metadata documentation.",
     "migration": "Use phased migration, sandbox testing, rollback planning, and stakeholder communication."
 }
 
-def check_guideline(topic):
+def check_guideline_archived(topic):
     """
     Checks for best practices related to a given topic.
 
@@ -32,7 +32,7 @@ def check_guideline(topic):
     Returns:
     str: The best practice guideline for the specified topic, or a message indicating no matching guideline was found.
     """
-    return best_practices.get(topic.lower(), "No matching guideline found.")
+    return best_practices_archived.get(topic.lower(), "No matching guideline found.")
 
 
 def check_guideline_dynamic(topic, agent):
@@ -95,7 +95,7 @@ def check_guideline_dynamic(topic, agent):
 
 
 
-def keyword_match_in_section(term, section_text):
+def keyword_match_in_section(term, agent):
     """
     Checks if a keyword or concept is explicitly mentioned in a section of the report.
 
@@ -104,7 +104,7 @@ def keyword_match_in_section(term, section_text):
 
     Parameters:
     term (str): The keyword or concept to search for in the section.
-    section_text (str): The text of the section to search within.
+    agent (ReActConsultantAgent): The agent instance (used for memory and context).
 
     Workflow:
     1. Converts the keyword and section text to lowercase to ensure case-insensitive matching.
@@ -115,6 +115,7 @@ def keyword_match_in_section(term, section_text):
     str: A message indicating whether the keyword was found in the section.
     """
     term_lower = term.lower()
+    section_text = agent.get_section_text()
     if term_lower in section_text.lower():
         return f"The keyword '{term}' was found in the section."
     else:
@@ -125,7 +126,7 @@ def keyword_match_in_section(term, section_text):
 # This tool helps the agent assess the feasibility of a timeline for an IT migration project.
 # It checks if the timeline is too short, potentially feasible, or reasonable for a full migration.
 
-def check_timeline_feasibility(duration_str):
+def check_timeline_feasibility_archived(duration_str):
     """
     Checks the feasibility of a timeline for an IT migration project.
 
@@ -207,7 +208,7 @@ def check_timeline_feasibility(duration_str):
 # This tool helps the agent search for a specific term in the entire consulting report.
 # It returns the sections where the term was found, if any.
 
-def search_report(term, report_sections):
+def search_report(term, agent):
     """
     Searches for a specific term in the entire consulting report.
 
@@ -229,6 +230,7 @@ def search_report(term, report_sections):
     str: A message indicating the sections where the term was found or a message indicating that the term was not found.
     """
     found_in = []
+    report_sections = agent.get_report_sections()
     for section, content in report_sections.items():
         if term.lower() in content.lower():
             found_in.append(section)
@@ -239,7 +241,7 @@ def search_report(term, report_sections):
 
 
 # Tool to check report has expected sections
-def highlight_missing_sections(report_sections):
+def highlight_missing_sections_archive(report_sections):
     """
     Compares expected canonical (standard) sections against the actual report_sections keys.
     Returns a list of missing expected sections.
@@ -254,44 +256,10 @@ def highlight_missing_sections(report_sections):
         return "✅ All expected sections are present."
 
 
-# Tool to check alignment between section and report goals
-def check_alignment_with_goals(section_name, report_sections_dict, model="gpt-3.5-turbo", temperature=0.6):
-    """
-    Checks the alignment between the goals of the report and a specific section.
-
-    Purpose:
-    This function evaluates whether a specific section of the report aligns with the stated goals and objectives. It uses the OpenAI API to generate an evaluation of the alignment.
-
-    Parameters:
-    section_name (str): The name of the section to evaluate for alignment.
-    report_sections_dict (dict): A dictionary where keys are section headers and values are the corresponding section contents.
-    model (str): The model to use for the API call. Default is "gpt-3.5-turbo".
-    temperature (float): The sampling temperature to use. Higher values mean the model will take more risks. Default is 0.6.
-
-    Workflow:
-    1. Tries to find the "Goals & Objectives" section in the report.
-    2. If the "Goals & Objectives" section is not found, searches for goals in other sections based on keywords.
-    3. Retrieves the text of the specified section to evaluate.
-    4. If either the goals or the section text is not found, returns a warning message.
-    5. Constructs a prompt for the OpenAI API to evaluate the alignment between the goals and the specified section.
-    6. Calls the OpenAI API with tracking to get the evaluation.
-    7. Returns the evaluation or an error message if the API call fails.
-
-    Returns:
-    str: The evaluation of the alignment between the goals and the specified section, or an error message if the API call fails.
-    """
-    # Step 1: Try exact match first
-    try:
-        response = call_openai_with_tracking(messages, model=model, temperature=temperature)
-        return response.strip()
-    except Exception as e:
-        return f"⚠️ Failed to check alignment: {str(e)}"
-
-
 # Tool to compare two sections of a report for duplication, contradictions, or inconsistencies
 # This tool compares two sections of an IT consulting report for duplication, contradictions, or inconsistencies.
 # It also notes if one section covers content that the other should include.
-def compare_with_other_section(section_a, section_b, report_sections_dict, model="gpt-3.5-turbo", temperature=0.6):
+def compare_with_other_section_archive(section_a, section_b, report_sections_dict, model="gpt-3.5-turbo", temperature=0.6):
     """
     Compares two sections of an IT consulting report for duplication, contradictions, or inconsistencies.
 
@@ -339,7 +307,7 @@ def compare_with_other_section(section_a, section_b, report_sections_dict, model
 
 
 # Tool to generate client questions based on a section of a report
-def generate_client_questions(section_text, model="gpt-3.5-turbo", temperature=0.6):
+def generate_client_questions(agent, model="gpt-3.5-turbo", temperature=0.6):
     """
     Generates client questions based on a section of an IT strategy report.
 
@@ -347,20 +315,22 @@ def generate_client_questions(section_text, model="gpt-3.5-turbo", temperature=0
     This function acts as a skeptical client reviewing a section of an IT strategy report and generates 3-5 clarifying or challenging questions based on potential assumptions, unclear terms, or missing context.
 
     Parameters:
-    section_text (str): The text of the section to generate questions for.
+    agent (ReActConsultantAgent): The agent instance (used for memory and context).
     model (str): The model to use for the API call. Default is "gpt-3.5-turbo".
     temperature (float): The sampling temperature to use. Higher values mean the model will take more risks. Default is 0.6.
 
     Workflow:
-    1. Constructs a prompt that instructs the model to act as a skeptical client and generate questions based on the section text.
-    2. Creates a list of messages with the constructed prompt.
-    3. Calls the OpenAI API with tracking using the call_openai_with_tracking function.
-    4. If the API call is successful, returns the generated questions.
-    5. If an exception occurs, returns a failure message with the exception details.
+    1. Retrieves the section text from the agent instance.
+    2. Constructs a prompt that instructs the model to act as a skeptical client and generate questions based on the section text.
+    3. Creates a list of messages with the constructed prompt.
+    4. Calls the OpenAI API with tracking using the call_openai_with_tracking function.
+    5. If the API call is successful, returns the generated questions.
+    6. If an exception occurs, returns a failure message with the exception details.
 
     Returns:
     str: The generated questions or a failure message if the API call fails.
     """
+    section_text = agent.section_text
     prompt = (
         "You are acting as a skeptical client reviewing the following section of an IT strategy report.\n"
         "Generate 3-5 clarifying or challenging questions the client might ask based on potential assumptions, unclear terms, or missing context.\n\n"
@@ -374,3 +344,4 @@ def generate_client_questions(section_text, model="gpt-3.5-turbo", temperature=0
         return response.strip()
     except Exception as e:
         return f"⚠️ Failed to generate questions: {str(e)}"
+    

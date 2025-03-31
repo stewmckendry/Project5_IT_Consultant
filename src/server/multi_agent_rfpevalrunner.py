@@ -4,8 +4,9 @@ from typing import Dict, List
 from src.server.proposal_eval import evaluate_proposal
 from src.utils.export_utils import export_proposal_report, save_markdown_and_pdf
 from src.server.final_eval_summary import generate_final_comparison_summary
+from src.utils.file_loader import load_report_text_from_file, parse_rfp_from_file
 
-def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_criteria: List[str], model="gpt-3.5-turbo") -> tuple:
+def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = None, rfp_criteria: List[str] = None, model="gpt-3.5-turbo") -> tuple:
     """
     Runs multi-agent evaluation for multiple proposals against common RFP criteria.
     
@@ -19,6 +20,16 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_criteria: List[
         summary_markdown: markdown comparison summary
         score_table: DataFrame with scores per criterion per vendor
     """
+    # Step 1: Extract criteria if needed
+    if rfp_file:
+        print(f"📄 Loading RFP from {rfp_file}...")
+        rfp_text = load_report_text_from_file(rfp_file)
+        rfp_criteria = parse_rfp_from_text(rfp_text)
+        print(f"✅ Extracted RFP criteria: {rfp_criteria}")
+
+    assert rfp_criteria is not None and len(rfp_criteria) > 0, "No RFP criteria provided or extracted."
+
+
     # Define output directory
     project_root = Path.cwd().parent
     outputs_dir = project_root / "outputs" / "proposal_eval_reports"

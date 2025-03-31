@@ -3,8 +3,9 @@ from src.server.react_agent import ReActConsultantAgent, run_react_loop_for_rfp_
 from src.models.llmscoring_rfp import score_proposal_content_with_llm_and_tools
 from src.utils.tools.tool_embeddings import build_tool_embeddings
 from src.models.openai_interface import call_openai_with_tracking
-from src.utils.tools.tool_catalog import tool_catalog
+from src.utils.tools.tool_catalog_RFP import tool_catalog
 import uuid
+from src.utils.file_loader import preprocess_proposal_for_criteria_with_threshold
 
 
 def evaluate_proposal(proposal_text, rfp_criteria, model="gpt-3.5-turbo"):
@@ -37,30 +38,40 @@ def evaluate_proposal(proposal_text, rfp_criteria, model="gpt-3.5-turbo"):
         - overall_score (float): The overall average score across all criteria.
         - swot_summary (str): A SWOT assessment of the proposal.
     """
+    
+    print("🔍 Preprocessing proposal...")
+    matched_sections = preprocess_proposal_for_criteria_with_threshold(
+        proposal_text=proposal_text,
+        rfp_criteria=rfp_criteria,
+        score_threshold=0.4  # you can tune this
+    )
+
     results = []
 
     for criterion in rfp_criteria:
         print(f"\n=== Evaluating: {criterion} ===")
+        section_text = matched_sections.get(criterion, "")
 
         # Step 1: Run ToT for reasoning path to generate thoughts (questions) by criterion
         tot_agent = SimpleToTAgent(
             llm=generate_thoughts_openai,
-            scorer=lambda t: score_thought_with_openai(t, criterion, proposal_text),
+            scorer=lambda t: score_thought_with_openai(t, criterion, section_text),
             beam_width=2,
             max_depth=2
         )
-        result = tot_agent.run(section=proposal_text, criterion=criterion)
+        result = tot_agent.run(section=section_text, criterion=criterion)
         top_thoughts = result["reasoning_path"]
 
         # Step 2–4: Run ReAct loop using ToT thoughts and embedding-aware tool selection
-        react_agent = ReActConsultantAgent(section_name=criterion, section_text=proposal_text)
+        react_agent = ReActConsultantAgent(section_name=criterion, section_text=section_text)
         report_sections = {"Proposal": proposal_text}
         tool_embeddings = build_tool_embeddings(tool_catalog)
         #react_agent.report_section = proposal_text
         tool_history = run_react_loop_for_rfp_eval(
             agent=react_agent,
             criterion=criterion,
-            proposal_text=proposal_text,
+            section_text=section_text,
+            full_proposal_text=proposal_text,
             thoughts=top_thoughts,
             tool_embeddings=tool_embeddings,
             report_sections=report_sections,

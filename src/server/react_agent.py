@@ -5,8 +5,9 @@ from src.models.openai_interface import call_openai_with_tracking
 from src.models.section_tools_llm import auto_fill_gaps_with_research, check_recommendation_alignment, check_summary_support, evaluate_smart_goals, generate_final_summary, should_cite, upgrade_section_with_research
 from src.server.prompt_builders import build_tool_hints, format_tool_catalog_for_prompt
 from src.models.scoring import summarize_and_score_section
-from src.utils.tools.tool_catalog import tool_catalog
-from src.utils.tools.tools_basic import check_alignment_with_goals, check_guideline_dynamic, check_timeline_feasibility, compare_with_other_section, generate_client_questions, highlight_missing_sections, keyword_match_in_section, search_report
+from src.utils.tools.tool_catalog_RFP import tool_catalog
+from src.utils.tools.tools_basic import check_alignment_with_goals, check_guideline_dynamic, compare_with_other_section, generate_client_questions, highlight_missing_sections, keyword_match_in_section, search_report
+#from src.utils.tools.tools_basic import check_timeline_feasibility
 from src.utils.tools.tools_nlp import analyze_tone_textblob, check_for_jargon, check_readability, extract_named_entities
 from src.utils.tools.tools_reasoning import analyze_math_question, pick_tool_by_intent_fuzzy
 from src.utils.tools.tools_web import search_arxiv, search_serpapi, search_web, search_wikipedia, should_search_arxiv
@@ -15,6 +16,59 @@ from src.utils.tools.tool_embeddings import suggest_tools_by_embedding
 from src.models.openai_embeddings import get_openai_embedding  # used internally by suggest_tools...
 #from src.utils.text_processing import truncate_text  # Optional
 from src.utils.tools.tool_hints import build_tool_hints_for_rfp_eval_embedding, build_tool_hint_text_forRFPeval  # new helper
+from src.utils.tools.tools_general import (
+    detect_boilerplate_or_marketing_fluff,
+    evaluate_writing_clarity,
+    check_fact_substantiation,
+    check_for_unsupported_assumptions
+)
+from src.utils.tools.tools_rfp_method import (
+    evaluate_collaboration_approach,
+)
+from src.utils.tools.tools_RFP_team import (
+    check_team_experience_alignment,
+    detect_bait_and_switch_risk,
+    check_local_resource_presence
+)
+from src.utils.tools.tools_rfp_experience import (
+    check_vendor_experience_relevance,
+    check_vendor_experience_evidence
+)
+from src.utils.tools.tools_RFP_plan import (
+    check_implementation_milestones,
+    check_resource_plan_realism,
+    check_assumption_reasonableness,
+    check_timeline_feasibility,
+    check_contingency_plans
+)
+from src.utils.tools.tools_rfp_method import (
+    check_discovery_approach,
+    check_requirements_approach,
+    check_design_approach,
+    check_build_approach,
+    check_test_approach,
+    check_deployment_approach,
+    check_operate_approach,
+    check_agile_compatibility,
+    check_accelerators_and_tools
+)  
+from src.utils.tools.tools_RFP_costs import (
+    check_value_for_money,
+    check_cost_benchmark,
+    generate_cost_forecast
+)
+from src.utils.tools.tools_RFP_risk import (
+    check_data_privacy_and_security_measures,
+    check_risk_register_or_mitigation_plan,
+    check_compliance_certifications
+)
+from src.utils.tools.tools_RFP_fit import (
+    evaluate_product_fit,
+    evaluate_nfr_support,
+    evaluate_modularity_and_scalability,
+    check_product_roadmap,
+    evaluate_demos_and_proofs
+)
 
 
 class ReActConsultantAgent:
@@ -38,18 +92,20 @@ class ReActConsultantAgent:
         Builds a prompt for the ReAct framework based on the section text and history.
     """
 
-    def __init__(self, section_name, section_text, model="gpt-3.5-turbo", temperature=0.7, initial_thought=None):
+    def __init__(self, section_name, section_text, proposal_text, model="gpt-3.5-turbo", temperature=0.7, initial_thought=None):
         """
         Initializes the ReActConsultantAgent with the given section name, section text, model, and temperature.
 
         Parameters:
         section_name (str): The name of the section to review.
         section_text (str): The text of the section to review.
+        proposal_text (str): Full proposal text (or relevant excerpt).
         model (str): The model to use for the API call. Default is "gpt-3.5-turbo".
         temperature (float): The sampling temperature to use. Higher values mean the model will take more risks. Default is 0.7.
         """
         self.section_name = section_name
         self.section_text = section_text
+        self.full_proposal_text = proposal_text
         self.model = model
         self.temperature = temperature
         self.initial_thought = initial_thought  # ✅ NEW: Starting thought from ToT
@@ -135,7 +191,7 @@ class ReActConsultantAgent:
             return [{"role": "user", "content": base_prompt}]
     
     
-    def build_react_prompt_forRFPeval(self, criterion, proposal_text, thoughts=None, tool_embeddings=None):
+    def build_react_prompt_forRFPeval(self, criterion, section_text, full_proposal_text, thoughts=None, tool_embeddings=None):
         """
         Builds a ReAct-style prompt for evaluating a vendor proposal using a specific RFP criterion.
 
@@ -146,13 +202,13 @@ class ReActConsultantAgent:
             tool_embeddings (dict): Cached embeddings for tool catalog (required).
         """
         self.section_name = criterion
-        self.section_text = proposal_text
+        self.section_text = section_text
 
         # Generate embedding-based tool hints
         if tool_embeddings:
             tool_hint_text, tools_to_focus = build_tool_hints_for_rfp_eval_embedding(
                 criterion=criterion,
-                proposal_text=proposal_text,
+                proposal_text=section_text,
                 thoughts=thoughts,
                 tool_embeddings=tool_embeddings
             )
@@ -172,7 +228,8 @@ class ReActConsultantAgent:
             f"Action: <choose ONE tool from the list below>\n\n"
             f"⭐ Top tools for this task:\n{tool_hint_text}\n\n"
             f"🧰 Full tool catalog:\n{format_tool_catalog_for_prompt(tool_catalog)}\n\n"
-            f"📄 Proposal:\n{self.section_text}\n\n"
+            f"📄 Proposal Content Relevant to Criterion:\n{self.section_text}\n\n"
+            f"📄 Full Proposal:\n{self.full_proposal_text}\n\n"
         )
 
         for step in self.history:
@@ -327,10 +384,189 @@ def dispatch_tool_action(agent, action, report_sections=None):
         return f"⚠️ Unrecognized action: {action}. Please check the action format or choose a valid tool."
 
     try:
+        # general tools
         if action.startswith("check_guideline"):
             match = re.match(r'check_guideline\["(.+?)"\]', action)
             if match:
                 return check_guideline_dynamic(match.group(1),agent)
+        elif action.startswith("detect_boilerplate_or_marketing_fluff"):
+            match = re.match(r'detect_boilerplate_or_marketing_fluff\["(.+?)"\]', action)
+            if match:
+                text = match.group(1)
+                try:
+                    return detect_boilerplate_or_marketing_fluff(text)
+                except Exception as e:
+                    return f"⚠️ Tool execution error: {e}"
+            else:
+                return "⚠️ Could not parse detect_boilerplate_or_marketing_fluff action."
+        elif action.startswith("evaluate_writing_clarity"):
+            match = re.match(r'evaluate_writing_clarity\["(.+?)"\]', action)
+            if match:
+                text = match.group(1)
+                try:
+                    return evaluate_writing_clarity(text)
+                except Exception as e:
+                    return f"⚠️ Tool execution error: {e}"
+            else:
+                return "⚠️ Could not parse evaluate_writing_clarity action."
+        elif action.startswith("check_fact_substantiation"):
+            match = re.match(r'check_fact_substantiation\["(.+?)"\]', action)
+            if match:
+                return check_fact_substantiation(match.group(1))        
+        elif action.startswith("check_for_unsupported_assumptions"):
+            match = re.match(r'check_for_unsupported_assumptions\["(.+?)"\]', action)
+            if match:
+                return check_for_unsupported_assumptions(match.group(1))
+            
+        # RFP: team tools
+        elif action.startswith("evaluate_collaboration_approach"):
+            match = re.match(r'evaluate_collaboration_approach\["(.+?)"\]', action)
+            if match:
+                return evaluate_collaboration_approach(match.group(1))
+        elif action.startswith("check_team_experience_alignment"):
+            match = re.match(r'check_team_experience_alignment\["(.+?)"\]', action)
+            if match:
+                return check_team_experience_alignment(match.group(1))
+            else:
+                return "⚠️ Could not parse check_team_experience_alignment action."
+        elif action.startswith("detect_bait_and_switch_risk"):
+            match = re.match(r'detect_bait_and_switch_risk\["(.+?)"\]', action)
+            if match:
+                return detect_bait_and_switch_risk(match.group(1))
+            else:
+                return "⚠️ Could not parse detect_bait_and_switch_risk action."
+        elif action.startswith("check_local_resource_presence"):
+            match = re.match(r'check_local_resource_presence\["(.+?)"\]', action)
+            if match:
+                return check_local_resource_presence(match.group(1))
+            else:
+                return "⚠️ Could not parse check_local_resource_presence action."
+            
+        # RFP: experience tools
+        elif action.startswith("check_vendor_experience_relevance"):
+            match = re.match(r'check_vendor_experience_relevance\["(.+?)"\]', action)
+            if match:
+                return check_vendor_experience_relevance(match.group(1), agent)
+        elif action.startswith("check_vendor_experience_evidence"):
+            match = re.match(r'check_vendor_experience_evidence\["(.+?)"\]', action)
+            if match:
+                return check_vendor_experience_evidence(match.group(1), agent)
+            
+        # RFP: plan tools
+        elif action.startswith("check_timeline_feasibility"):
+            match = re.match(r'check_timeline_feasibility\["(.+?)"\]', action)
+            if match:
+                return check_timeline_feasibility(match.group(1))
+        elif action.startswith("check_contingency_plans"):
+            match = re.match(r'check_contingency_plans\["(.+?)"\]', action)
+            if match:
+                return check_contingency_plans(match.group(1))
+        elif action.startswith("check_implementation_milestones"):
+            match = re.match(r'check_implementation_milestones\["(.+?)"\]', action)
+            if match:
+                return check_implementation_milestones(match.group(1))
+        elif action.startswith("check_resource_plan_realism"):
+            match = re.match(r'check_resource_plan_realism\["(.+?)"\]', action)
+            if match:
+                return check_resource_plan_realism(match.group(1))
+        elif action.startswith("check_assumption_reasonableness"):
+            match = re.match(r'check_assumption_reasonableness\["(.+?)"\]', action)
+            if match:
+                return check_assumption_reasonableness(match.group(1))
+        
+        # RFP: method tools
+        elif action.startswith("check_discovery_approach"):
+            match = re.match(r'check_discovery_approach\["(.+?)"\]', action)
+            if match:
+                return check_discovery_approach(match.group(1))
+        elif action.startswith("check_requirements_approach"):
+            match = re.match(r'check_requirements_approach\["(.+?)"\]', action)
+            if match:
+                return check_requirements_approach(match.group(1))
+        elif action.startswith("check_design_approach"):
+            match = re.match(r'check_design_approach\["(.+?)"\]', action)
+            if match:
+                return check_design_approach(match.group(1))
+        elif action.startswith("check_build_approach"):
+            match = re.match(r'check_build_approach\["(.+?)"\]', action)
+            if match:
+                return check_build_approach(match.group(1))
+        elif action.startswith("check_test_approach"):
+            match = re.match(r'check_test_approach\["(.+?)"\]', action)
+            if match:
+                return check_test_approach(match.group(1))
+        elif action.startswith("check_deployment_approach"):
+            match = re.match(r'check_deployment_approach\["(.+?)"\]', action)
+            if match:
+                return check_deployment_approach(match.group(1))
+        elif action.startswith("check_operate_approach"):
+            match = re.match(r'check_operate_approach\["(.+?)"\]', action)
+            if match:
+                return check_operate_approach(match.group(1))
+        elif action.startswith("check_agile_compatibility"):
+            match = re.match(r'check_agile_compatibility\["(.+?)"\]', action)
+            if match:
+                return check_agile_compatibility(match.group(1))
+        elif action.startswith("check_accelerators_and_tools"):
+            match = re.match(r'check_accelerators_and_tools\["(.+?)"\]', action)
+            if match:
+                return check_accelerators_and_tools(match.group(1))
+        
+        # RFP: cost/value tools
+        elif action.startswith("check_value_for_money"):
+            match = re.match(r'check_value_for_money\["(.+?)"\]', action)
+            if match:
+                return check_value_for_money(match.group(1))
+        elif action.startswith("check_cost_benchmark"):
+            match = re.match(r'check_cost_benchmark\["(.+?)"\]', action)
+            if match:
+                return check_cost_benchmark(match.group(1))
+        elif action.startswith("generate_cost_forecast"):
+            match = re.match(r'generate_cost_forecast\["(.+?)"\]', action)
+            if match:
+                return generate_cost_forecast(match.group(1))
+
+        # RFP: risk tools
+        elif action.startswith("check_data_privacy_and_security_measures"):
+            match = re.match(r'check_data_privacy_and_security_measures\["(.+?)"\]', action)
+            if match:
+                return check_data_privacy_and_security_measures(match.group(1))
+        elif action.startswith("check_risk_register_or_mitigation_plan"):
+            match = re.match(r'check_risk_register_or_mitigation_plan\["(.+?)"\]', action)
+            if match:
+                return check_risk_register_or_mitigation_plan(match.group(1))
+        elif action.startswith("check_compliance_certifications"):
+            match = re.match(r'check_compliance_certifications\["(.+?)"\]', action)
+            if match:
+                return check_compliance_certifications(match.group(1))
+
+        # RFP: fit tools
+        elif action.startswith("evaluate_product_fit"):
+            match = re.match(r'evaluate_product_fit\["(.+?)"\]', action)
+            if match:
+                return evaluate_product_fit(match.group(1))
+
+        elif action.startswith("evaluate_nfr_support"):
+            match = re.match(r'evaluate_nfr_support\["(.+?)"\]', action)
+            if match:
+                return evaluate_nfr_support(match.group(1))
+
+        elif action.startswith("evaluate_modularity_and_scalability"):
+            match = re.match(r'evaluate_modularity_and_scalability\["(.+?)"\]', action)
+            if match:
+                return evaluate_modularity_and_scalability(match.group(1))
+
+        elif action.startswith("check_product_roadmap"):
+            match = re.match(r'check_product_roadmap\["(.+?)"\]', action)
+            if match:
+                return check_product_roadmap(match.group(1))
+
+        elif action.startswith("evaluate_demos_and_proofs"):
+            match = re.match(r'evaluate_demos_and_proofs\["(.+?)"\]', action)
+            if match:
+                return evaluate_demos_and_proofs(match.group(1))
+
+
         elif action.startswith("keyword_match_in_section"):
             match = re.match(r'keyword_match_in_section\["(.+?)"\]', action)
             if match:
@@ -496,7 +732,7 @@ def select_best_tool_with_llm(agent, criterion, top_thoughts, model="gpt-3.5-tur
     return response.strip().splitlines()[0]  # Example: check_guideline["cloud"]
 
 
-def run_react_loop_for_rfp_eval(agent, criterion, proposal_text, thoughts=None, tool_embeddings=None, report_sections=None, max_steps=4):
+def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_text, thoughts=None, tool_embeddings=None, report_sections=None, max_steps=4):
     """
     Runs a ReAct loop for RFP evaluation using the new embedding-based prompt builder.
 
@@ -514,7 +750,8 @@ def run_react_loop_for_rfp_eval(agent, criterion, proposal_text, thoughts=None, 
     for step_num in range(max_steps):
         messages = agent.build_react_prompt_forRFPeval(
             criterion=criterion,
-            proposal_text=proposal_text,
+            section_text=section_text,
+            full_proposal_text=full_proposal_text,
             thoughts=thoughts,
             tool_embeddings=tool_embeddings
         )

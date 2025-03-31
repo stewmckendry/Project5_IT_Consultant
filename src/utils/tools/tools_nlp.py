@@ -5,54 +5,36 @@
 import re
 from textstat.textstat import textstat
 import spacy
+from src.models.openai_interface import call_openai_with_tracking
+from src.server.prompt_builders import build_dual_context_prompt
 
 
-JARGON_LIST = {
-    "synergy", "leverage", "optimize", "stakeholder alignment", "enablement",
-    "digital transformation", "bandwidth", "scalability", "paradigm",
-    "blockchain", "AI", "ML", "IoT", "Zero Trust", "DevOps", "infrastructure-as-code",
-    "EHR", "CRM", "VPN", "cloud-native", "containerization", "agile methodology"
-}
-
-def check_for_jargon(section_text):
+def check_for_jargon(agent) -> str:
     """
-    Checks for jargon or technical terms in a section of the report.
-
-    Purpose:
-    This function helps identify the presence of jargon or technical terms in a section of the report by searching for predefined terms.
-
-    Parameters:
-    section_text (str): The text of the section to search within.
-
-    Workflow:
-    1. Initializes an empty list `found_terms` to store the jargon or technical terms found in the section.
-    2. Iterates through each term in the `JARGON_LIST` set.
-    3. For each term, constructs a regex pattern to match the term as a whole word (case-insensitive).
-    4. Searches for the term in the section text using the regex pattern.
-    5. If the term is found, appends it to the `found_terms` list.
-    6. After checking all terms, returns a message indicating the jargon or technical terms found or a message indicating that no notable jargon or technical terms were found.
-
-    Returns:
-    str: A message indicating the jargon or technical terms found in the section, or a message indicating that no notable jargon or technical terms were found.
+    Uses an LLM to analyze if the section overuses jargon or buzzwords that might reduce clarity.
     """
-    found_terms = []
-    for term in JARGON_LIST:
-        pattern = r"\b" + re.escape(term) + r"\b"
-        if re.search(pattern, section_text, flags=re.IGNORECASE):
-            found_terms.append(term)
-    if found_terms:
-        return f"The section includes jargon or technical terms: {', '.join(found_terms)}."
-    else:
-        return "No notable jargon or technical terms found."
+    prompt = build_dual_context_prompt(
+        "Identify any jargon, marketing buzzwords, or overly technical terms that may obscure meaning or reduce clarity. "
+        "List the terms and briefly explain if they hinder understanding or appear unnecessary.",
+        agent
+    )
+
+    try:
+        response = call_openai_with_tracking(prompt)
+        return response.strip()
+    except Exception as e:
+        return f"An error occurred while processing the request: {str(e)}"
+
 
 # Tool to assess readability of a section with textstat scores
 # Flesch Reading Ease: higher score indicates easier readability
 # Reading Level Estimate: grade level of text
 # Difficult Words Count: number of difficult words in the text
-def check_readability(section_text):
-    score = textstat.flesch_reading_ease(section_text)
-    level = textstat.text_standard(section_text)
-    difficult = textstat.difficult_words(section_text)
+def check_readability(agent):
+    full_proposal_text = agent.full_proposal_text
+    score = textstat.flesch_reading_ease(full_proposal_text)
+    level = textstat.text_standard(full_proposal_text)
+    difficult = textstat.difficult_words(full_proposal_text)
 
     summary = (
         f"📖 **Flesch Reading Ease**: {score:.1f} (higher = easier)\n"
@@ -62,7 +44,7 @@ def check_readability(section_text):
     return summary
 
 
-def analyze_tone_textblob(section_text):
+def analyze_tone_textblob(agent):
     """
     Analyzes the tone and clarity of a given text section using TextBlob.
 
@@ -87,7 +69,8 @@ def analyze_tone_textblob(section_text):
     Returns:
     str: A formatted string indicating the tone and clarity of the text, including the polarity and subjectivity scores.
     """
-    blob = TextBlob(section_text)
+    full_proposal_text = agent.full_proposal_text
+    blob = TextBlob(full_proposal_text)
     polarity = blob.sentiment.polarity
     subjectivity = blob.sentiment.subjectivity
 
@@ -107,7 +90,7 @@ def analyze_tone_textblob(section_text):
 # Load the spaCy NLP model
 nlp = spacy.load("en_core_web_sm")
 
-def extract_named_entities(section_text):
+def extract_named_entities(agent):
     """
     Extracts named entities from a given text section using a preloaded NLP model.
 
@@ -128,7 +111,8 @@ def extract_named_entities(section_text):
     Returns:
     str: A formatted string summarizing the detected named entities, grouped by their labels. If no entities are found, returns a message indicating this.
     """
-    doc = nlp(section_text)
+    proposal_text = agent.full_proposal_text
+    doc = nlp(proposal_text)
     if not doc.ents:
         return "No named entities found."
 

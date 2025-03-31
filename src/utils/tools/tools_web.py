@@ -162,7 +162,7 @@ def search_arxiv(query, agent):
         return f"⚠️ Arxiv search failed: {str(e)}"
 
 
-def should_search_arxiv(section_text, model="gpt-3.5-turbo"):
+def should_search_arxiv(agent, model="gpt-3.5-turbo"):
     """
     Determines whether academic research or scientific citations could enhance the credibility of a report section.
 
@@ -185,6 +185,7 @@ def should_search_arxiv(section_text, model="gpt-3.5-turbo"):
         - bool: `True` if academic research is recommended, `False` otherwise.
         - str: The reason for the decision.
     """
+    section_text = agent.section_text
     prompt = (
         "You're reviewing a section of an IT consulting report.\n"
         "Determine whether academic research or scientific citations could enhance the credibility of this section.\n\n"
@@ -202,3 +203,36 @@ def should_search_arxiv(section_text, model="gpt-3.5-turbo"):
     reason = reason_match.group(1).strip() if reason_match else "No reason given."
     
     return decision == "YES", reason
+
+
+def search_external_sources(query: str, max_sources: int = 3) -> str:
+    """
+    Runs external web and knowledge base searches for a given query and returns summarized findings.
+    """
+    results = []
+
+    try:
+        web = search_web(query)
+        if web: results.append(f"🌐 Web: {web}")
+    except Exception as e:
+        results.append(f"🌐 Web search error: {str(e)}")
+
+    try:
+        serp = search_serpapi(query)
+        if serp: results.append(f"🔍 SerpAPI: {serp}")
+    except Exception as e:
+        results.append(f"🔍 SerpAPI error: {str(e)}")
+
+    try:
+        wiki = search_wikipedia(query)
+        if wiki: results.append(f"📚 Wikipedia: {wiki}")
+    except Exception as e:
+        results.append(f"📚 Wikipedia error: {str(e)}")
+
+    try:
+        arxiv = search_arxiv(query)
+        if arxiv: results.append(f"📄 arXiv: {arxiv}")
+    except Exception as e:
+        results.append(f"📄 arXiv error: {str(e)}")
+
+    return "\n\n".join(results[:max_sources])

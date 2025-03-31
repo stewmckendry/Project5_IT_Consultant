@@ -6,6 +6,7 @@ import fitz # for PDFs
 import os
 from typing import Dict
 import PyPDF2
+from src.utils.rfp_extractors import extract_evaluation_criteria
 
 def load_report_text_from_file(filepath):
     """
@@ -66,3 +67,84 @@ def load_rfp_criteria(filepath: str) -> list:
     criteria = [line.split('.', 1)[-1].strip() if '.' in line else line for line in lines]
     return criteria
 
+
+import re
+from src.utils.text_loader import load_text_file
+
+def parse_rfp_from_file(filepath: str) -> dict:
+    """
+    Parses RFP file and extracts:
+    - Full text
+    - Section map (e.g., Background, Requirements, Criteria)
+    - Evaluation criteria with weights and descriptions (if found)
+    """
+    full_text = load_report_text_from_file(filepath)
+    
+    # Step 1: Split sections using common RFP headers
+    section_patterns = {
+        "Background": r"(?:^|\n)(Background|Introduction)\s*[\n:-]",
+        "Requirements": r"(?:^|\n)(Requirements|Business Needs|Scope of Work)\s*[\n:-]",
+        "Evaluation Criteria": r"(?:^|\n)(Evaluation Criteria|Scoring Methodology|Proposal Evaluation)\s*[\n:-]",
+        "Terms and Conditions": r"(?:^|\n)(Terms and Conditions|Contract Requirements)\s*[\n:-]",
+    }
+
+    sections = {}
+    for name, pattern in section_patterns.items():
+        match = re.search(pattern, full_text, flags=re.IGNORECASE)
+        if match:
+            start_idx = match.start()
+            sections[name] = full_text[start_idx:]
+
+    # Step 2: Try to extract evaluation criteria block
+    criteria_block = sections.get("Evaluation Criteria", "")
+    criteria = extract_evaluation_criteria(criteria_block)
+
+    return {
+        "full_text": full_text,
+        "sections": sections,
+        "criteria": criteria
+    }
+
+
+from typing import List, Dict, Optional
+from sentence_transformers import SentenceTransformer, util
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def preprocess_proposal_for_criteria_with_threshold(
+    proposal_text: str,
+    rfp_criteria: List[str],
+    rfp_criterion_descriptions: Optional[Dict[str, str]] = None,
+    score_threshold: float = 0.4
+) -> Dict[str, str]:
+    """
+    Matches segments of proposal text to each RFP criterion using embedding similarity,
+    returning only segments above a relevance threshold.
+    """
+    # Split proposal into paragraphs
+    paragraphs = [p.strip() for p in proposal_text.split("\n") if p.strip()]
+    para_embeddings = model.encode(paragraphs, convert_to_tensor=True)
+
+    matched_sections = {}
+
+    for criterion in rfp_criteria:
+        query = rfp_criterion_descriptions.get(criterion, criterion) if rfp_criterion_descriptions else criterion
+        query_embedding = model.encode(query, convert_to_tensor=True)
+
+        # Compute similarity scores
+        cosine_scores = util.pytorch_cos_sim(query_embedding, para_embeddings)[0]
+
+        # Select all paragraphs above the threshold
+        relevant_paragraphs = [
+            para for para, score in zip(paragraphs, cosine_scores)
+            if score.item() >= score_threshold
+        ]
+
+        # If nothing matched, fall back to top 1 best match
+        if not relevant_paragraphs:
+            top_idx = cosine_scores.argmax().item()
+            relevant_paragraphs = [paragraphs[top_idx]]
+
+        matched_sections[criterion] = "\n\n".join(relevant_paragraphs)
+
+    return matched_sections

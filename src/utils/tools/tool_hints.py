@@ -1,7 +1,7 @@
 # Recommend tools for ReActConsultant Agent based on the RFP evaluation criterion
 
 from src.utils.tools.tool_embeddings import suggest_tools_by_embedding
-from src.utils.tools.tool_catalog import tool_catalog  # or however it's defined
+from src.utils.tools.tool_catalog_RFP import tool_catalog  # or however it's defined
 #from src.utils.text_processing import truncate_text  # optional, if needed
 from src.utils.tools.tool_catalog import tool_priority_map, global_tools, criterion_tool_map
 from src.server.prompt_builders import format_tool_hints_for_prompt

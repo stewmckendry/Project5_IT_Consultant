@@ -3,8 +3,7 @@
 # Helper to construct system + user messages for the reasoning agent
 from src.utils.text_processing import map_section_to_canonical
 from src.utils.tools.tool_catalog import tool_catalog, tool_priority_map, global_tools, criterion_tool_map
-
-
+from src.utils.tools.tool_catalog_RFP import tool_catalog
 
 def build_review_prompt(report_text, history=[]):
     """
@@ -163,3 +162,20 @@ Respond with only the tool name and input, like:
     search_web["cloud security best practices"]
 """
     return [{"role": "user", "content": prompt}]
+
+
+def build_dual_context_prompt(instruction: str, agent) -> str:
+    return (
+        f"{instruction}\n\n"
+        f"--- Section (Vendor Response) ---\n{agent.section}\n\n"
+        f"--- Full Proposal (Context) ---\n{agent.full_proposal_text}\n\n"
+        f"Explain your reasoning based on best practices.\n"
+    )
+
+
+def build_section_context_prompt(instruction: str, agent) -> str:
+    return (
+        f"{instruction}\n\n"
+        f"--- Section (Vendor Response) ---\n{agent.section}\n\n"
+        f"Explain your reasoning based on best practices.\n"
+    )
