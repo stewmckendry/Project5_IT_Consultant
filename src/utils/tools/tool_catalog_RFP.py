@@ -356,6 +356,6 @@ tool_catalog = {
             'check_for_unsupported_assumptions["Client will provide integration team and data migration tools."]'
         ]
     }
-
-
 }
+
+

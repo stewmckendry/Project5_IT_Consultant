@@ -22,10 +22,11 @@ def check_summary_support(summary_text, other_sections):
     return call_openai_with_tracking(messages)
 
 
-def evaluate_smart_goals(section_text):
+def evaluate_smart_goals(agent):
     """
     Evaluate whether the section's goals follow the SMART criteria.
     """
+    section_text = agent.section_text
     prompt = (
         "Evaluate the following goals using the SMART criteria:\n"
         "Specific, Measurable, Achievable, Relevant, Time-bound.\n\n"

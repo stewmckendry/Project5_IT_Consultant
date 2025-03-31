@@ -70,6 +70,8 @@ from src.utils.tools.tools_RFP_fit import (
     evaluate_demos_and_proofs
 )
 
+from src.utils.tools.tool_registry import TOOL_FUNCTION_MAP
+from src.server.tool_logging import log_tool_execution
 
 class ReActConsultantAgent:
     """
@@ -352,6 +354,56 @@ def run_single_react_step(agent, thought, action, step_num=0):
 
 def dispatch_tool_action(agent, action, report_sections=None):
     """
+    Dispatches and executes the appropriate tool function based on the action string.
+
+    Parameters:
+        agent (ReActConsultantAgent): The reasoning agent with context.
+        action (str): Action string (e.g., tool_name["some input"]).
+        report_sections (dict): Optional full report for context.
+
+    Returns:
+        str: Result from the tool or error message.
+    """
+    print(f"🛠️ Tool action: {action}")
+
+    try:
+        # Match action like tool_name["input text"]
+        match = re.match(r'^([a-zA-Z0-9_]+)(\["(.*)"\])?$', action)
+        if not match:
+            return f"⚠️ Could not parse tool action: {action}"
+
+        tool_name = match.group(1)
+        input_arg = match.group(3) if match.group(2) else None
+
+        if tool_name not in TOOL_FUNCTION_MAP:
+            return f"⚠️ Tool '{tool_name}' not recognized in TOOL_FUNCTION_MAP."
+
+        tool_fn = TOOL_FUNCTION_MAP[tool_name]
+
+
+        # Determine function signature
+        if input_arg:
+            log_tool_execution(tool_name, tool_fn, input_arg, agent)
+            # Function expects an input string + agent (typical case)
+            try:
+                return tool_fn(input_arg, agent)
+            except TypeError:
+                # Some tools may only take 1 arg
+                return tool_fn(input_arg)
+        else:
+            log_tool_execution(tool_name, tool_fn, None, agent)
+            # Function expects just agent
+            try:
+                return tool_fn(agent)
+            except TypeError:
+                return tool_fn()
+
+    except Exception as e:
+        return f"⚠️ Tool execution error: {str(e)}"
+
+
+def dispatch_tool_action_archive(agent, action, report_sections=None):
+    """
     Purpose:
         Dispatches a tool action based on the provided action string and executes the corresponding function.
 
@@ -394,7 +446,7 @@ def dispatch_tool_action(agent, action, report_sections=None):
             if match:
                 text = match.group(1)
                 try:
-                    return detect_boilerplate_or_marketing_fluff(text)
+                    return detect_boilerplate_or_marketing_fluff(agent)
                 except Exception as e:
                     return f"⚠️ Tool execution error: {e}"
             else:
@@ -404,7 +456,7 @@ def dispatch_tool_action(agent, action, report_sections=None):
             if match:
                 text = match.group(1)
                 try:
-                    return evaluate_writing_clarity(text)
+                    return evaluate_writing_clarity(agent)
                 except Exception as e:
                     return f"⚠️ Tool execution error: {e}"
             else:
@@ -412,33 +464,33 @@ def dispatch_tool_action(agent, action, report_sections=None):
         elif action.startswith("check_fact_substantiation"):
             match = re.match(r'check_fact_substantiation\["(.+?)"\]', action)
             if match:
-                return check_fact_substantiation(match.group(1))        
+                return check_fact_substantiation(agent)        
         elif action.startswith("check_for_unsupported_assumptions"):
             match = re.match(r'check_for_unsupported_assumptions\["(.+?)"\]', action)
             if match:
-                return check_for_unsupported_assumptions(match.group(1))
+                return check_for_unsupported_assumptions(agent)
             
         # RFP: team tools
         elif action.startswith("evaluate_collaboration_approach"):
             match = re.match(r'evaluate_collaboration_approach\["(.+?)"\]', action)
             if match:
-                return evaluate_collaboration_approach(match.group(1))
+                return evaluate_collaboration_approach(agent)
         elif action.startswith("check_team_experience_alignment"):
             match = re.match(r'check_team_experience_alignment\["(.+?)"\]', action)
             if match:
-                return check_team_experience_alignment(match.group(1))
+                return check_team_experience_alignment(agent)
             else:
                 return "⚠️ Could not parse check_team_experience_alignment action."
         elif action.startswith("detect_bait_and_switch_risk"):
             match = re.match(r'detect_bait_and_switch_risk\["(.+?)"\]', action)
             if match:
-                return detect_bait_and_switch_risk(match.group(1))
+                return detect_bait_and_switch_risk(agent)
             else:
                 return "⚠️ Could not parse detect_bait_and_switch_risk action."
         elif action.startswith("check_local_resource_presence"):
             match = re.match(r'check_local_resource_presence\["(.+?)"\]', action)
             if match:
-                return check_local_resource_presence(match.group(1))
+                return check_local_resource_presence(agent)
             else:
                 return "⚠️ Could not parse check_local_resource_presence action."
             
@@ -446,135 +498,135 @@ def dispatch_tool_action(agent, action, report_sections=None):
         elif action.startswith("check_vendor_experience_relevance"):
             match = re.match(r'check_vendor_experience_relevance\["(.+?)"\]', action)
             if match:
-                return check_vendor_experience_relevance(match.group(1), agent)
+                return check_vendor_experience_relevance(agent)
         elif action.startswith("check_vendor_experience_evidence"):
             match = re.match(r'check_vendor_experience_evidence\["(.+?)"\]', action)
             if match:
-                return check_vendor_experience_evidence(match.group(1), agent)
+                return check_vendor_experience_evidence(agent)
             
         # RFP: plan tools
         elif action.startswith("check_timeline_feasibility"):
             match = re.match(r'check_timeline_feasibility\["(.+?)"\]', action)
             if match:
-                return check_timeline_feasibility(match.group(1))
+                return check_timeline_feasibility(agent)
         elif action.startswith("check_contingency_plans"):
             match = re.match(r'check_contingency_plans\["(.+?)"\]', action)
             if match:
-                return check_contingency_plans(match.group(1))
+                return check_contingency_plans(agent)
         elif action.startswith("check_implementation_milestones"):
             match = re.match(r'check_implementation_milestones\["(.+?)"\]', action)
             if match:
-                return check_implementation_milestones(match.group(1))
+                return check_implementation_milestones(agent)
         elif action.startswith("check_resource_plan_realism"):
             match = re.match(r'check_resource_plan_realism\["(.+?)"\]', action)
             if match:
-                return check_resource_plan_realism(match.group(1))
+                return check_resource_plan_realism(agent)
         elif action.startswith("check_assumption_reasonableness"):
             match = re.match(r'check_assumption_reasonableness\["(.+?)"\]', action)
             if match:
-                return check_assumption_reasonableness(match.group(1))
+                return check_assumption_reasonableness(agent)
         
         # RFP: method tools
         elif action.startswith("check_discovery_approach"):
             match = re.match(r'check_discovery_approach\["(.+?)"\]', action)
             if match:
-                return check_discovery_approach(match.group(1))
+                return check_discovery_approach(agent)
         elif action.startswith("check_requirements_approach"):
             match = re.match(r'check_requirements_approach\["(.+?)"\]', action)
             if match:
-                return check_requirements_approach(match.group(1))
+                return check_requirements_approach(agent)
         elif action.startswith("check_design_approach"):
             match = re.match(r'check_design_approach\["(.+?)"\]', action)
             if match:
-                return check_design_approach(match.group(1))
+                return check_design_approach(agent)
         elif action.startswith("check_build_approach"):
             match = re.match(r'check_build_approach\["(.+?)"\]', action)
             if match:
-                return check_build_approach(match.group(1))
+                return check_build_approach(agent)
         elif action.startswith("check_test_approach"):
             match = re.match(r'check_test_approach\["(.+?)"\]', action)
             if match:
-                return check_test_approach(match.group(1))
+                return check_test_approach(agent)
         elif action.startswith("check_deployment_approach"):
             match = re.match(r'check_deployment_approach\["(.+?)"\]', action)
             if match:
-                return check_deployment_approach(match.group(1))
+                return check_deployment_approach(agent)
         elif action.startswith("check_operate_approach"):
             match = re.match(r'check_operate_approach\["(.+?)"\]', action)
             if match:
-                return check_operate_approach(match.group(1))
+                return check_operate_approach(agent)
         elif action.startswith("check_agile_compatibility"):
             match = re.match(r'check_agile_compatibility\["(.+?)"\]', action)
             if match:
-                return check_agile_compatibility(match.group(1))
+                return check_agile_compatibility(agent)
         elif action.startswith("check_accelerators_and_tools"):
             match = re.match(r'check_accelerators_and_tools\["(.+?)"\]', action)
             if match:
-                return check_accelerators_and_tools(match.group(1))
+                return check_accelerators_and_tools(agent)
         
         # RFP: cost/value tools
         elif action.startswith("check_value_for_money"):
             match = re.match(r'check_value_for_money\["(.+?)"\]', action)
             if match:
-                return check_value_for_money(match.group(1))
+                return check_value_for_money(agent)
         elif action.startswith("check_cost_benchmark"):
             match = re.match(r'check_cost_benchmark\["(.+?)"\]', action)
             if match:
-                return check_cost_benchmark(match.group(1))
+                return check_cost_benchmark(agent)
         elif action.startswith("generate_cost_forecast"):
             match = re.match(r'generate_cost_forecast\["(.+?)"\]', action)
             if match:
-                return generate_cost_forecast(match.group(1))
+                return generate_cost_forecast(agent)
 
         # RFP: risk tools
         elif action.startswith("check_data_privacy_and_security_measures"):
             match = re.match(r'check_data_privacy_and_security_measures\["(.+?)"\]', action)
             if match:
-                return check_data_privacy_and_security_measures(match.group(1))
+                return check_data_privacy_and_security_measures(agent)
         elif action.startswith("check_risk_register_or_mitigation_plan"):
             match = re.match(r'check_risk_register_or_mitigation_plan\["(.+?)"\]', action)
             if match:
-                return check_risk_register_or_mitigation_plan(match.group(1))
+                return check_risk_register_or_mitigation_plan(agent)
         elif action.startswith("check_compliance_certifications"):
             match = re.match(r'check_compliance_certifications\["(.+?)"\]', action)
             if match:
-                return check_compliance_certifications(match.group(1))
+                return check_compliance_certifications(agent)
 
         # RFP: fit tools
         elif action.startswith("evaluate_product_fit"):
             match = re.match(r'evaluate_product_fit\["(.+?)"\]', action)
             if match:
-                return evaluate_product_fit(match.group(1))
+                return evaluate_product_fit(agent)
 
         elif action.startswith("evaluate_nfr_support"):
             match = re.match(r'evaluate_nfr_support\["(.+?)"\]', action)
             if match:
-                return evaluate_nfr_support(match.group(1))
+                return evaluate_nfr_support(agent)
 
         elif action.startswith("evaluate_modularity_and_scalability"):
             match = re.match(r'evaluate_modularity_and_scalability\["(.+?)"\]', action)
             if match:
-                return evaluate_modularity_and_scalability(match.group(1))
+                return evaluate_modularity_and_scalability(agent)
 
         elif action.startswith("check_product_roadmap"):
             match = re.match(r'check_product_roadmap\["(.+?)"\]', action)
             if match:
-                return check_product_roadmap(match.group(1))
+                return check_product_roadmap(agent)
 
         elif action.startswith("evaluate_demos_and_proofs"):
             match = re.match(r'evaluate_demos_and_proofs\["(.+?)"\]', action)
             if match:
-                return evaluate_demos_and_proofs(match.group(1))
+                return evaluate_demos_and_proofs(agent)
 
 
         elif action.startswith("keyword_match_in_section"):
             match = re.match(r'keyword_match_in_section\["(.+?)"\]', action)
             if match:
-                return keyword_match_in_section(match.group(1), agent.section_text)
+                return keyword_match_in_section(match.group(1), agent)
         elif action.startswith("check_timeline_feasibility"):
             match = re.match(r'check_timeline_feasibility\["(.+?)"\]', action)
             if match:
-                return check_timeline_feasibility(match.group(1))
+                return check_timeline_feasibility(agent)
         elif action.startswith("search_report"):
             match = re.match(r'search_report\["(.+?)"\]', action)
             if match:
@@ -583,26 +635,14 @@ def dispatch_tool_action(agent, action, report_sections=None):
             match = re.match(r'search_web\["(.+?)"\]', action)
             if match:
                 return search_web(match.group(1))
-        elif action == "check_for_jargon":
-            return check_for_jargon(agent.section_text)
         elif action == "generate_client_questions":
-            return generate_client_questions(agent.section_text)
-        elif action == "highlight_missing_sections":
-            return highlight_missing_sections(report_sections)
-        elif action.startswith("check_alignment_with_goals"):
-            match = re.match(r'check_alignment_with_goals\["(.+?)"\]', action)
-            if match:
-                return check_alignment_with_goals(match.group(1), report_sections)
-        elif action.startswith("compare_with_other_section"):
-            match = re.match(r'compare_with_other_section\["(.+?)",\s*"(.+?)"\]', action)
-            if match:
-                return compare_with_other_section(match.group(1), match.group(2), report_sections)
+            return generate_client_questions(agent)
         elif action.startswith("check_summary_support"):
             match = re.match(r'check_summary_support\["(.+?)"\]', action)
             if match:
                 return check_summary_support(match.group(1), report_sections)
         elif action == "evaluate_smart_goals":
-            return evaluate_smart_goals(agent.section_text)
+            return evaluate_smart_goals(agent)
         elif action.startswith("check_recommendation_alignment"):
             match = re.match(r'check_recommendation_alignment\["(.+?)"\]', action)
             if match:
@@ -631,8 +671,6 @@ def dispatch_tool_action(agent, action, report_sections=None):
                     return "⚠️ No matching tool found. Showing available tools:\n" + format_tool_catalog_for_prompt(tool_catalog)
         elif action == "final_summary":
             return generate_final_summary(agent)
-        elif action == "check_readability": 
-            return check_readability(agent.section_text)
         elif action.startswith("search_wikipedia"):
             match = re.match(r'search_wikipedia\["(.+?)"\]', action)
             if match:
@@ -641,7 +679,7 @@ def dispatch_tool_action(agent, action, report_sections=None):
             else:
                 return "⚠️ Could not parse search_wikipedia action."
         elif action == "analyze_tone_textblob":
-            return analyze_tone_textblob(agent.section_text)
+            return analyze_tone_textblob(agent)
         elif action.startswith("search_serpapi"):
             match = re.match(r'search_serpapi\["(.+?)"\]', action)
             if match:
@@ -650,7 +688,7 @@ def dispatch_tool_action(agent, action, report_sections=None):
             else:
                 return "⚠️ Could not parse search_serpapi action."
         elif action == "extract_named_entities":
-            return extract_named_entities(agent.section_text)
+            return extract_named_entities(agent)
         elif action.startswith("analyze_math_question"):
             match = re.match(r'analyze_math_question\["(.+?)"\]', action)
             if match:
@@ -668,7 +706,7 @@ def dispatch_tool_action(agent, action, report_sections=None):
                 query = action.replace("search_arxiv", "").strip(" -:\"")
                 return search_arxiv(query, agent)
         elif action == "auto_check_for_academic_support":
-            needs_citation, reason = should_search_arxiv(agent.section_text)
+            needs_citation, reason = should_search_arxiv(agent)
             if needs_citation:
                 # Automatically create and run an arxiv search
                 followup_action = f'search_arxiv["{agent.section_name}"]'
@@ -702,9 +740,9 @@ def dispatch_tool_action(agent, action, report_sections=None):
             else:
                 return "⚠️ Could not parse should_cite action."
         elif action == "auto_fill_gaps_with_research":
-            return auto_fill_gaps_with_research(agent.section_text)
+            return auto_fill_gaps_with_research(agent)
         elif action == "upgrade_section_with_research":
-            improved, log, footnotes = upgrade_section_with_research(agent.section_text)
+            improved, log, footnotes = upgrade_section_with_research(agent)
             observation = "🧠 Section upgraded with research. Rewrites:\n"
             for change in log:
                 observation += f"- 🔹 '{change['original']}'\n  🧠 → {change['improved']}\n  📚 Reason: {change['reason']}\n\n"
