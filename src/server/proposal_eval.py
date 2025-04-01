@@ -7,7 +7,7 @@ from src.utils.tools.tool_catalog_RFP import tool_catalog
 import uuid
 from src.utils.file_loader import preprocess_proposal_for_criteria_with_threshold
 from src.utils.logging_utils import log_phase, log_result, print_tool_stats
-
+import json
 
 def evaluate_proposal(proposal_text, rfp_criteria, model="gpt-3.5-turbo"):
     """
@@ -50,14 +50,16 @@ def evaluate_proposal(proposal_text, rfp_criteria, model="gpt-3.5-turbo"):
     results = []
 
     for criterion in rfp_criteria:
-        log_phase(f"\n=== Evaluating: {criterion} ===")
+        log_phase(f"Evaluating criterion (json): {criterion}")
+        criterion = criterion["name"]
+        log_phase(f"Evaluating criterion (name): {criterion}")
         section_text = matched_sections.get(criterion, "")
 
         # Step 1: Run ToT for reasoning path to generate thoughts (questions) by criterion
         tot_agent = SimpleToTAgent(
             llm=generate_thoughts_openai,
             scorer=lambda t: score_thought_with_openai(t, criterion, section_text),
-            beam_width=2,
+            beam_width=1,
             max_depth=2
         )
         result = tot_agent.run(section=section_text, criterion=criterion)
@@ -76,7 +78,7 @@ def evaluate_proposal(proposal_text, rfp_criteria, model="gpt-3.5-turbo"):
             thoughts=top_thoughts,
             tool_embeddings=tool_embeddings,
             report_sections=report_sections,
-            max_steps=4
+            max_steps=2
         )
 
         # Step 5: Extract ReAct Thought->Act->Observe history for context in proposal evaluation
@@ -131,4 +133,6 @@ Generate a SWOT assessment (Strengths, Weaknesses, Opportunities, Threats) for t
     messages = [{"role": "user", "content": swot_prompt}]
     swot_summary = call_openai_with_tracking(messages, model=model)
 
+    log_phase("✅ Proposal evaluation complete.")
+    log_phase(json.dumps(results, indent=2))  # Print entire structured result (nicely formatted)
     return results, overall_score, swot_summary

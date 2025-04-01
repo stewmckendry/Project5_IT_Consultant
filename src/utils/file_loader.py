@@ -126,7 +126,9 @@ def preprocess_proposal_for_criteria_with_threshold(
 
     matched_sections = {}
 
+    log_phase("🔍 Matching proposal sections to RFP criteria...")
     for criterion in rfp_criteria:
+        criterion = criterion["name"]
         query = rfp_criterion_descriptions.get(criterion, criterion) if rfp_criterion_descriptions else criterion
         query_embedding = model.encode(query, convert_to_tensor=True)
 
@@ -138,9 +140,11 @@ def preprocess_proposal_for_criteria_with_threshold(
             para for para, score in zip(paragraphs, cosine_scores)
             if score.item() >= score_threshold
         ]
+        log_phase(f"🔍 Found {len(relevant_paragraphs)} relevant paragraphs for criterion '{criterion}'")
 
         # If nothing matched, fall back to top 1 best match
         if not relevant_paragraphs:
+            log_phase(f"🔍 No paragraphs above threshold for '{criterion}'. Selecting top match.")
             top_idx = cosine_scores.argmax().item()
             relevant_paragraphs = [paragraphs[top_idx]]
 
@@ -149,22 +153,31 @@ def preprocess_proposal_for_criteria_with_threshold(
     return matched_sections
 
 
-def load_scenario_data(scenario_name, base_path: Path = Path("data/rfp_scenarios")):
-    scenario_dir = base_path / scenario_name
-    rfp_file = scenario_dir / "rfp.txt"
+def load_scenario_data(scenario_name, base_path: Path = Path("../data/rfp_scenarios")):
+    scenario_path = (base_path / scenario_name).resolve()
 
-    # Load all vendor proposals (everything except rfp.txt)
+    if not scenario_path.is_dir():
+        raise FileNotFoundError(f"Scenario directory not found: {scenario_path}")
+
+    rfp_file = scenario_path / "rfp.txt"
+    log_phase(f"📁 Loading scenario data from {scenario_path} (RFP: {rfp_file})")
+
     proposals = {}
-    for file in scenario_dir.glob("*.txt"):
-        if file.name != "rfp.txt":
+    txt_files = list(scenario_path.glob("*.txt"))
+    log_phase(f"📄 Found {len(txt_files)} files")  # Count of files
+
+    for file in txt_files:
+        log_phase(f"📄 Loading proposal from {file.name}")
+        if file.name.lower() != "rfp.txt":
             vendor = file.stem.replace("_", " ").title()
             proposals[vendor] = file.read_text()
+            log_phase(f"📄 Loaded proposal for {vendor}")
 
     return proposals, str(rfp_file)
 
 
 DEFAULT_SCENARIO = "scenario1_basic"
-DEFAULT_SCENARIO_DIR = Path("data/rfp_scenarios")
+DEFAULT_SCENARIO_DIR = Path("../data/rfp_scenarios")
 
 
 def load_default_scenario(scenario_name: str = DEFAULT_SCENARIO) -> tuple[dict, str]:

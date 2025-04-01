@@ -24,10 +24,13 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = Non
     # Step 1: Extract criteria if needed
     if rfp_file:
         log_phase(f"📄 Loading RFP from {rfp_file}...")
-        rfp_text = load_report_text_from_file(rfp_file)
-        rfp_criteria = parse_rfp_from_file(rfp_file)
+        rfp_parsed = parse_rfp_from_file(rfp_file)
+        rfp_text = rfp_parsed["full_text"]
+        rfp_criteria = rfp_parsed["criteria"]
+        rfp_sections = rfp_parsed["sections"] # for future use
+        log_phase(f"✅ RFP loaded. Extracted full_text: {rfp_text}")
+        log_phase(f"✅ Extracted RFP sections: {rfp_sections}")
         log_phase(f"✅ Extracted RFP criteria: {rfp_criteria}")
-
     assert rfp_criteria is not None and len(rfp_criteria) > 0, "No RFP criteria provided or extracted."
 
 
@@ -45,8 +48,10 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = Non
         results, overall_score, swot_summary = evaluate_proposal(proposal_text, rfp_criteria, model=model)
         log_phase(f"✅ {vendor_name} evaluation complete.")
         log_result(vendor_name, "Overall Score", overall_score)
-        for criterion, score in results.items():
-            log_result(vendor_name, criterion, score)
+        log_phase(f"{vendor_name}, Results: {results}") # Print results
+        score_dict = {r["criterion"]: r["proposal_score"] for r in results}
+        for criterion, proposal_score in score_dict.items():
+            log_result(vendor_name, criterion, proposal_score)
 
         # Step 2: Save full proposal report (Markdown + HTML + PDF)
         export_proposal_report(vendor_name, results, overall_score, swot_summary, output_dir=outputs_dir)

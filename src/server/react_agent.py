@@ -71,7 +71,8 @@ from src.utils.tools.tools_RFP_fit import (
 )
 
 from src.utils.tools.tool_registry import TOOL_FUNCTION_MAP
-from src.utils.logging_utils import log_phase, log_tool_used, log_tool_execution
+from src.utils.logging_utils import log_phase, log_tool_used, log_tool_execution, log_tool_failed
+import time
 
 class ReActConsultantAgent:
     """
@@ -366,17 +367,19 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None):
     """
     log_phase(f"🛠️ Tool action: {action}")
     tool_map = tool_map or TOOL_FUNCTION_MAP
+
     try:
         # Match action like tool_name["input text"]
         match = re.match(r'^([a-zA-Z0-9_]+)(\["(.*)"\])?$', action)
         if not match:
+            log_tool_failed("unknown_tool", f"Could not parse tool action: {action}")
             return f"⚠️ Could not parse tool action: {action}"
 
         tool_name = match.group(1)
         input_arg = match.group(3) if match.group(2) else None
 
         if tool_name not in tool_map:
-            log_tool_used("unknown_tool")
+            log_tool_failed(tool_name, f"Tool '{tool_name}' not recognized.")
             return f"⚠️ Tool '{tool_name}' not recognized in TOOL_FUNCTION_MAP."
 
         tool_fn = tool_map[tool_name]
@@ -389,6 +392,7 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None):
             try:
                 return tool_fn(input_arg, agent)
             except TypeError:
+                log_tool_failed(tool_name, f"Tool '{tool_name}' failed with input: {input_arg}")
                 # Some tools may only take 1 arg
                 return tool_fn(input_arg)
         else:
@@ -397,9 +401,11 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None):
             try:
                 return tool_fn(agent)
             except TypeError:
+                log_tool_failed(tool_name, f"Tool '{tool_name}' execution failed with no input.")
                 return tool_fn()
 
     except Exception as e:
+        log_tool_failed(action, f"Tool execution error: {str(e)}")
         return f"⚠️ Tool execution error: {str(e)}"
 
 

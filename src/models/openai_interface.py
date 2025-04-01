@@ -3,7 +3,8 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI, OpenAIError
-from src.utils.logging_utils import log_phase, log_openai_call
+from src.utils.logging_utils import log_phase, log_openai_call, log_openai_call_time
+import time
 
 # Load the .env file
 load_dotenv()
@@ -46,12 +47,14 @@ def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, 
     COST_PER_1K_TOKENS = 0.0015
 
     try:
+        start = time.time()
         response = client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens
         )
+        duration = round(time.time() - start, 2)
     except Exception as e:
         return f"⚠️ Tool execution error: {str(e)}"
 
@@ -66,6 +69,8 @@ def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, 
     estimated_cost_usd += (total / 1000) * COST_PER_1K_TOKENS
 
     # Logging
-    log_openai_call(messages, response)
+    log_openai_call(messages, response, prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens)
+    log_openai_call_time(duration)
 
     return response.choices[0].message.content.strip()
