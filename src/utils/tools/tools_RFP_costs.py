@@ -11,8 +11,9 @@ def check_value_for_money(agent) -> str:
         "Explain your reasoning based on best practices and common expectations for similar proposals.\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -28,8 +29,9 @@ def check_cost_benchmark(agent) -> str:
         "Explain your reasoning based on benchmarks, market trends, or comparable services.\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -46,8 +48,9 @@ def generate_cost_forecast(agent) -> str:
         "Explain your reasoning.\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"

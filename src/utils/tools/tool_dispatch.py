@@ -96,7 +96,6 @@ TOOL_FUNCTION_MAP = {
     "check_accelerators_and_tools": check_accelerators_and_tools,
 
     # Cost Tools
-    "analyze_cost_structure": analyze_cost_structure,
     "check_value_for_money": check_value_for_money,
     "check_cost_benchmark": check_cost_benchmark,
     "generate_cost_forecast": generate_cost_forecast,

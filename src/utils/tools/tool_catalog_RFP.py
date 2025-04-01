@@ -12,21 +12,33 @@ tool_catalog = {
         "version": "1.0",
         "description": "Flags missing key sections like costs, risks, methodology, or team.",
         "usage": "highlight_missing_sections",
+        "examples": [
+            'highlight_missing_sections["The proposal lacks a detailed risk management plan."]'
+        ]
     },
     "keyword_match": {
         "version": "1.0",
         "description": "Performs keyword-level match to assess coverage of key topics.",
         "usage": 'keyword_match["privacy compliance"]',
+        "examples": [
+            'keyword_match["data privacy compliance"]'
+        ]
     },
     "check_summary_support": {
         "version": "1.0",
         "description": "Validates whether recommendations are clearly supported by the proposal content.",
         "usage": "check_summary_support",
+        "examples": [
+            'check_summary_support["The vendor has a strong track record in healthcare."]'
+        ]
     },
     "check_section_structure": {
         "version": "1.0",
         "description": "Checks for logical structure, headings, and section flow.",
         "usage": "check_section_structure",
+        "examples": [
+            'check_section_structure["The proposal is organized into clear sections with headings."]'
+        ]
     },
 
     # --- Methodology + Delivery Lifecycle ---
@@ -307,22 +319,34 @@ tool_catalog = {
     "suggest_tool_for": {
         "version": "1.0",
         "description": "Suggests which tool(s) to use based on your goal.",
-        "usage": 'suggest_tool_for["evaluate scalability of product"]'
+        "usage": 'suggest_tool_for["evaluate scalability of product"]',
+        "examples": [
+            'suggest_tool_for["evaluate scalability of product"]'
+        ]
     },
     "tool_help": {
         "version": "1.0",
         "description": "Returns help and examples for the named tool.",
-        "usage": 'tool_help["check_assumptions_validity"]'
+        "usage": 'tool_help["check_assumptions_validity"]',
+        "examples": [
+            'tool_help["check_assumptions_validity"]'
+        ]
     },
     "auto_fill_gaps_with_research": {
         "version": "1.0",
         "description": "Fills vague content with relevant external evidence.",
-        "usage": 'auto_fill_gaps_with_research["data privacy best practices"]'
+        "usage": 'auto_fill_gaps_with_research["data privacy best practices"]',
+        "examples": [
+            'auto_fill_gaps_with_research["data privacy best practices"]'
+        ]
     },
     "check_guideline_dynamic": {
         "version": "1.0",
         "description": "Searches for industry standards/guidelines on a topic.",
-        "usage": 'check_guideline_dynamic["FHIR security best practices"]'
+        "usage": 'check_guideline_dynamic["FHIR security best practices"]',
+        "examples": [
+            'check_guideline_dynamic["FHIR security best practices"]'
+        ]
     },
     "detect_boilerplate_or_marketing_fluff": {
         "description": "Identifies vague or overly promotional content in a proposal section.",

@@ -25,8 +25,9 @@ If any is found, list examples and suggest areas for improvement.
 If the section is clear and substantive, confirm that.
 """
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt, model="gpt-3.5-turbo")
+        response = call_openai_with_tracking(messages, model="gpt-3.5-turbo")
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -44,8 +45,9 @@ Evaluate the following section for:
 Return a 2-3 sentence critique of the writing quality.
 """
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -81,8 +83,9 @@ Below is some external context from web/wikipedia/academic sources:
 
 Please evaluate whether the statement appears factually supported and identify anything that may be unverifiable, exaggerated, or vague.
 """
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -120,8 +123,9 @@ Below is some external context from web/wikipedia/academic sources:
 Please evaluate whether the assumptions appear realistic and any concerns the client might have.
 
 """
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -140,8 +144,9 @@ Here is the full text:
 
 Please summarize this into a concise search query or fact-checking topic. Keep it under {max_chars} characters, preserving the core claim or topic to investigate.
 """
+    messages = [{"role": "user", "content": prompt}]
     try:
-        result = call_openai_with_tracking(prompt, model="gpt-3.5-turbo")
+        result = call_openai_with_tracking(messages, model="gpt-3.5-turbo")
         return result.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"

@@ -6,7 +6,7 @@ from src.models.section_tools_llm import auto_fill_gaps_with_research, check_rec
 from src.server.prompt_builders import build_tool_hints, format_tool_catalog_for_prompt
 from src.models.scoring import summarize_and_score_section
 from src.utils.tools.tool_catalog_RFP import tool_catalog
-from src.utils.tools.tools_basic import check_alignment_with_goals, check_guideline_dynamic, compare_with_other_section, generate_client_questions, highlight_missing_sections, keyword_match_in_section, search_report
+from src.utils.tools.tools_basic import check_guideline_dynamic, generate_client_questions, keyword_match_in_section, search_report
 #from src.utils.tools.tools_basic import check_timeline_feasibility
 from src.utils.tools.tools_nlp import analyze_tone_textblob, check_for_jargon, check_readability, extract_named_entities
 from src.utils.tools.tools_reasoning import analyze_math_question, pick_tool_by_intent_fuzzy
@@ -94,7 +94,7 @@ class ReActConsultantAgent:
         Builds a prompt for the ReAct framework based on the section text and history.
     """
 
-    def __init__(self, section_name, section_text, proposal_text, model="gpt-3.5-turbo", temperature=0.7, initial_thought=None):
+    def __init__(self, section_name, section_text, proposal_text=None, model="gpt-3.5-turbo", temperature=0.7, initial_thought=None):
         """
         Initializes the ReActConsultantAgent with the given section name, section text, model, and temperature.
 
@@ -352,7 +352,7 @@ def run_single_react_step(agent, thought, action, step_num=0):
     return observation
 
 
-def dispatch_tool_action(agent, action, report_sections=None):
+def dispatch_tool_action(agent, action, report_sections=None, tool_map=None):
     """
     Dispatches and executes the appropriate tool function based on the action string.
 
@@ -365,7 +365,7 @@ def dispatch_tool_action(agent, action, report_sections=None):
         str: Result from the tool or error message.
     """
     print(f"🛠️ Tool action: {action}")
-
+    tool_map = tool_map or TOOL_FUNCTION_MAP
     try:
         # Match action like tool_name["input text"]
         match = re.match(r'^([a-zA-Z0-9_]+)(\["(.*)"\])?$', action)
@@ -375,10 +375,10 @@ def dispatch_tool_action(agent, action, report_sections=None):
         tool_name = match.group(1)
         input_arg = match.group(3) if match.group(2) else None
 
-        if tool_name not in TOOL_FUNCTION_MAP:
+        if tool_name not in tool_map:
             return f"⚠️ Tool '{tool_name}' not recognized in TOOL_FUNCTION_MAP."
 
-        tool_fn = TOOL_FUNCTION_MAP[tool_name]
+        tool_fn = tool_map[tool_name]
 
 
         # Determine function signature
@@ -786,6 +786,7 @@ def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_te
         list of step dictionaries with thought, action, observation.
     """
     for step_num in range(max_steps):
+        print("Entering react loop step...")
         messages = agent.build_react_prompt_forRFPeval(
             criterion=criterion,
             section_text=section_text,
@@ -793,25 +794,28 @@ def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_te
             thoughts=thoughts,
             tool_embeddings=tool_embeddings
         )
+        print("Prompt for LLM: ", messages)
 
         # Run LLM
         response = call_openai_with_tracking(messages, model=agent.model, temperature=agent.temperature)
 
+        print("LLM response: ", response)
+
         # Parse response
         try:
-            lines = response.strip().split("\n")
-            thought = next(line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("thought"))
-            action = next(line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("action"))
+            thought, action = parse_thought_action(response)
+            print("Action: ", action)
             print(f"\n🔁 Step {step_num + 1}")
             print(f"🧠 Thought: {thought}")
             print(f"⚙️ Action: {action}")
         except Exception as e:
             print(f"⚠️ Failed to parse step {step_num + 1}: {str(e)}")
             break
-
+        
         # Run tool
         try:
             observation = dispatch_tool_action(agent, action, report_sections=report_sections)
+            print(f"👀 Observation: {observation}")
             if observation is None:
                 observation = "⚠️ Tool returned no result."
         except Exception as e:
@@ -825,7 +829,42 @@ def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_te
             "observation": observation
         })
 
+        print(f"agent.history: {agent.history}")
+
         if action == "summarize":
             break
 
     return agent.history
+
+def parse_thought_action(response: str):
+    """
+    Parses an LLM response into a (thought, action) tuple.
+
+    Parameters:
+        response (str): Multiline LLM response with Thought and Action.
+
+    Returns:
+        (thought: str, action: str)
+
+    Raises:
+        ValueError if parsing fails.
+    """
+    lines = response.strip().split("\n")
+    thought = None
+    action = None
+
+    for line in lines:
+        line = line.strip()
+        if line.lower().startswith("thought:"):
+            parts = line.split(":", 1)
+            if len(parts) == 2:
+                thought = parts[1].strip()
+        elif line.lower().startswith("action:"):
+            parts = line.split(":", 1)
+            if len(parts) == 2:
+                action = parts[1].strip()
+
+    if not thought or not action:
+        raise ValueError(f"Could not parse Thought or Action from response:\n{response}")
+
+    return thought, action

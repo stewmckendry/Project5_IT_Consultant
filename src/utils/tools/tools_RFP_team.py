@@ -10,8 +10,9 @@ Evaluate how well the team's experience aligns with the requirements of the proj
 For each named resource, also check external sources on web or LinkedIn to verify their experience.
 """
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -24,8 +25,9 @@ Review the following proposal section and determine if there's a risk of "bait a
 Look for vague staffing commitments, lack of CV details, or hedging language.
 """
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -38,8 +40,9 @@ You're reviewing a proposal section to assess whether the vendor proposes using 
 Extract any relevant details about staffing location and evaluate whether this meets the needs of the client.
 """
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"

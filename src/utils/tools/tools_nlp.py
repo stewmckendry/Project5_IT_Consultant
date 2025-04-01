@@ -18,9 +18,9 @@ def check_for_jargon(agent) -> str:
         "List the terms and briefly explain if they hinder understanding or appear unnecessary.",
         agent
     )
-
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"

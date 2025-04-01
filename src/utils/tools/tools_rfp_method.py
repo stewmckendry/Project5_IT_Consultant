@@ -14,8 +14,9 @@ Evaluate whether the approach promotes a strong partnership with the client. Loo
 Return a 2-3 sentence evaluation.
 """
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -31,8 +32,9 @@ def check_discovery_approach(agent) -> str:
         "Is it structured and compatible with government or enterprise expectations? "
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -48,8 +50,9 @@ def check_requirements_approach(agent) -> str:
         "Are multiple stakeholder perspectives included? Is traceability or documentation mentioned? "
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -65,8 +68,9 @@ def check_design_approach(agent) -> str:
         "Does it consider agile or iterative design and involve the client? "
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -82,8 +86,9 @@ def check_build_approach(agent) -> str:
         "code quality checks, documentation, and security integration?\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -98,8 +103,9 @@ def check_test_approach(agent) -> str:
         "Is the client involved in test planning or execution?\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -114,8 +120,9 @@ def check_deployment_approach(agent) -> str:
         "rollback plans, stakeholder communication, and readiness validation?\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -130,8 +137,9 @@ def check_operate_approach(agent) -> str:
         "monitoring, feedback loops, and continuous improvement practices?\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -149,8 +157,9 @@ def check_agile_compatibility(agent) -> str:
         "Does the approach help achieve cost and time certainty?\n\n"
     )
     prompt = build_dual_context_prompt(prompt, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -167,8 +176,9 @@ def check_accelerators_and_tools(agent) -> str:
         "How do these tools contribute to the project outcomes?\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"

@@ -24,7 +24,7 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = Non
     if rfp_file:
         print(f"📄 Loading RFP from {rfp_file}...")
         rfp_text = load_report_text_from_file(rfp_file)
-        rfp_criteria = parse_rfp_from_text(rfp_text)
+        rfp_criteria = parse_rfp_from_file(rfp_file)
         print(f"✅ Extracted RFP criteria: {rfp_criteria}")
 
     assert rfp_criteria is not None and len(rfp_criteria) > 0, "No RFP criteria provided or extracted."

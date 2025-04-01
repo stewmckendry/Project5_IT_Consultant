@@ -10,8 +10,9 @@ def evaluate_product_fit(agent) -> str:
         "Look for strong matches, partial gaps, or generic responses. Focus on how specifically it addresses key needs.\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -25,8 +26,9 @@ def evaluate_nfr_support(agent) -> str:
         "accessibility, user experience, performance, and availability? Identify any strengths or gaps.\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -40,8 +42,9 @@ def evaluate_modularity_and_scalability(agent) -> str:
         "customization? Is it designed to support scaling across multiple business lines?\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -56,8 +59,9 @@ def check_product_roadmap(agent) -> str:
         "aligns with the client’s evolving needs?\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -72,8 +76,9 @@ def evaluate_demos_and_proofs(agent) -> str:
         "and fit? Consider client examples, metrics, or third-party validation.\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"

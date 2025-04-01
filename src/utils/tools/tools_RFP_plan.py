@@ -11,8 +11,9 @@ def check_implementation_milestones(agent) -> str:
         "Explain your reasoning based on best practices and common delivery milestones.  Explain impact of missing milestones.\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -26,8 +27,9 @@ def check_resource_plan_realism(agent) -> str:
         "Consider the number and roles of team members, the timeline, scope of deliverables, and any stated assumptions. "
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -41,8 +43,9 @@ def check_assumption_reasonableness(agent) -> str:
         "Assess whether each assumption is reasonable and realistic based on typical project delivery practices. "
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -57,8 +60,9 @@ def check_timeline_feasibility(agent) -> str:
         "Determine whether this timeline is realistic for a complex IT implementation. "
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -73,8 +77,9 @@ def check_contingency_plans(agent) -> str:
         "Highlight any gaps if no such plans are found. "
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"

@@ -167,7 +167,7 @@ Respond with only the tool name and input, like:
 def build_dual_context_prompt(instruction: str, agent) -> str:
     return (
         f"{instruction}\n\n"
-        f"--- Section (Vendor Response) ---\n{agent.section}\n\n"
+        f"--- Section (Vendor Response) ---\n{agent.section_text}\n\n"
         f"--- Full Proposal (Context) ---\n{agent.full_proposal_text}\n\n"
         f"Explain your reasoning based on best practices.\n"
     )
@@ -176,6 +176,6 @@ def build_dual_context_prompt(instruction: str, agent) -> str:
 def build_section_context_prompt(instruction: str, agent) -> str:
     return (
         f"{instruction}\n\n"
-        f"--- Section (Vendor Response) ---\n{agent.section}\n\n"
+        f"--- Section (Vendor Response) ---\n{agent.section_text}\n\n"
         f"Explain your reasoning based on best practices.\n"
     )

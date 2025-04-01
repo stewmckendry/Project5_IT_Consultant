@@ -4,10 +4,8 @@ from openai import OpenAI
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from src.models.openai_embeddings import get_openai_embedding
-
 import os
 import pickle
-from src.models.openai_embeddings import get_openai_embedding
 
 # Convert tool catalog into embeddings (one for each tool)
 # Cache for future use
@@ -22,7 +20,10 @@ def build_tool_embeddings(tool_catalog, cache_path="tool_embeddings_cache.pkl"):
     print("⚙️ Generating tool embeddings...")
     tool_embeddings = {}
     for name, meta in tool_catalog.items():
-        text = meta["description"] + " " + " ".join(meta["examples"])
+        # Safe fallback for missing 'examples'
+        description = meta.get("description", "")
+        examples = meta.get("examples", [])
+        text = description + " " + " ".join(examples)
         embedding = get_openai_embedding(text)
         tool_embeddings[name] = embedding
 

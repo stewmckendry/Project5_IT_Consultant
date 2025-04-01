@@ -1,3 +1,5 @@
+import re
+
 def extract_evaluation_criteria(text: str) -> list:
     """
     Attempts to extract a list of evaluation criteria from a block of RFP text.
@@ -12,14 +14,17 @@ def extract_evaluation_criteria(text: str) -> list:
 
     for line in lines:
         line = line.strip()
-        match = re.match(r"^\d*\.?\s*([A-Za-z\s/&\-]+)[\s\-–:]*(\(?\d{1,3}%?\)?)?", line)
+        match = re.match(r"^(?:\d+\.\s*|\•\s*)?([A-Za-z\s/&\-]+?)(?:\s*[\-–:]\s*|\s+)?(\(?\d{1,3}%?\)?)?$", line)
         if match:
-            name = match.group(1).strip()
+            name = match.group(1).strip().rstrip("-–:")
             weight_raw = match.group(2)
             weight = None
             if weight_raw:
                 digits = re.findall(r"\d+", weight_raw)
                 weight = int(digits[0]) if digits else None
+            # 🛡️ Skip non-criteria lines like headings
+            if name.lower() in {"evaluation criteria", "criteria"} and weight is None:
+                continue
             criteria.append({
                 "name": name,
                 "weight": weight,

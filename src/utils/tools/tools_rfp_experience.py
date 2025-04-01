@@ -11,8 +11,9 @@ def check_vendor_experience_relevance(agent) -> str:
         "Look for named clients, project descriptions, and relevance to the RFP context.\n\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
@@ -28,8 +29,9 @@ def check_vendor_experience_evidence(agent) -> str:
         f"Section:\n{text}"
     )
     prompt = build_dual_context_prompt(instructions, agent)
+    messages = [{"role": "user", "content": prompt}]
     try:
-        response = call_openai_with_tracking(prompt)
+        response = call_openai_with_tracking(messages)
         return response.strip()
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"

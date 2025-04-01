@@ -7,6 +7,7 @@ import os
 from typing import Dict
 import PyPDF2
 from src.utils.rfp_extractors import extract_evaluation_criteria
+import re
 
 def load_report_text_from_file(filepath):
     """
@@ -67,9 +68,6 @@ def load_rfp_criteria(filepath: str) -> list:
     criteria = [line.split('.', 1)[-1].strip() if '.' in line else line for line in lines]
     return criteria
 
-
-import re
-from src.utils.text_loader import load_text_file
 
 def parse_rfp_from_file(filepath: str) -> dict:
     """

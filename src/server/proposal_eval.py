@@ -63,7 +63,7 @@ def evaluate_proposal(proposal_text, rfp_criteria, model="gpt-3.5-turbo"):
         top_thoughts = result["reasoning_path"]
 
         # Step 2–4: Run ReAct loop using ToT thoughts and embedding-aware tool selection
-        react_agent = ReActConsultantAgent(section_name=criterion, section_text=section_text, full_proposal_text=proposal_text)
+        react_agent = ReActConsultantAgent(section_name=criterion, section_text=section_text, proposal_text=proposal_text)
         report_sections = {"Proposal": proposal_text}
         tool_embeddings = build_tool_embeddings(tool_catalog)
         #react_agent.report_section = proposal_text
