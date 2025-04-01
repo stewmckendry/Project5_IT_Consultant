@@ -1,0 +1,7 @@
+We propose DataPilot, a modular analytics platform. It offers customizable dashboards and pre-built connectors for Salesforce, HubSpot, and NetSuite.
+
+DataPilot runs on AWS and can scale elastically. In 2023, our platform supported a client growth of 5x without downtime.
+
+Licensing is per-seat with volume discounts available. Estimated cost: $25K/year for 100 users.
+
+We provide onboarding within 2 weeks and 24/7 support with guaranteed response times under 1 hour.

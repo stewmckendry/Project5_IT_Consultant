@@ -3,6 +3,7 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI, OpenAIError
+from src.utils.logging_utils import log_phase, log_openai_call
 
 # Load the .env file
 load_dotenv()
@@ -65,6 +66,6 @@ def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, 
     estimated_cost_usd += (total / 1000) * COST_PER_1K_TOKENS
 
     # Logging
-    print(f"🔢 Prompt: {prompt_tokens} tokens | Completion: {completion_tokens} tokens | Cost: ${estimated_cost_usd:.4f} USD")
+    log_openai_call(messages, response)
 
     return response.choices[0].message.content.strip()

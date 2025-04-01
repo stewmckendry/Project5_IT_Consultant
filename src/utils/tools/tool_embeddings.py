@@ -6,6 +6,7 @@ import numpy as np
 from src.models.openai_embeddings import get_openai_embedding
 import os
 import pickle
+from src.utils.logging_utils import log_phase, log_result, print_tool_stats
 
 # Convert tool catalog into embeddings (one for each tool)
 # Cache for future use
@@ -13,11 +14,11 @@ def build_tool_embeddings(tool_catalog, cache_path="tool_embeddings_cache.pkl"):
     # If cached, load from file
     if os.path.exists(cache_path):
         with open(cache_path, "rb") as f:
-            print("✅ Loaded cached tool embeddings.")
+            log_phase("✅ Loaded cached tool embeddings.")
             return pickle.load(f)
 
     # Otherwise, generate and cache
-    print("⚙️ Generating tool embeddings...")
+    log_phase("⚙️ Generating tool embeddings...")
     tool_embeddings = {}
     for name, meta in tool_catalog.items():
         # Safe fallback for missing 'examples'
@@ -29,7 +30,7 @@ def build_tool_embeddings(tool_catalog, cache_path="tool_embeddings_cache.pkl"):
 
     with open(cache_path, "wb") as f:
         pickle.dump(tool_embeddings, f)
-        print(f"✅ Saved embeddings to: {cache_path}")
+        log_phase(f"✅ Saved embeddings to: {cache_path}")
 
     return tool_embeddings
 

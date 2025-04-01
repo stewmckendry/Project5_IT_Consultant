@@ -1,5 +1,0 @@
-Vendor B offers an AI-enabled EHR solution hosted in a secure, government-certified private cloud. The platform includes predictive analytics for patient risk profiling, NLP-enabled clinical note summarization, and native integrations with existing hospital systems. Vendor B emphasizes data privacy, noting compliance with HIPAA, GDPR, and local PHIPA requirements. Role-based permissions, audit logs, and zero-trust access are built into the platform.
-
-Implementation is projected at 12 months, with milestones defined at onboarding, integration, testing, and go-live. Vendor B provides full support for data migration, end-user training, and post-go-live optimization. Their implementation team includes certified project managers, clinicians, and technical specialists.
-
-Vendor B has successfully deployed the platform in seven Canadian hospital networks and three US healthcare systems. Case studies and outcomes (e.g., 25% reduction in documentation time) are summarized in an appendix. Pricing includes a one-time onboarding fee and an annual subscription based on modules selected. No client-side resources are required except project governance participation.

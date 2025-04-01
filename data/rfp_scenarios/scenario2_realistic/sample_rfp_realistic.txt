@@ -1,0 +1,14 @@
+## Overview
+Company X is seeking proposals for a scalable analytics platform.
+
+## Requirements
+- Dashboards
+- Integration with CRM/ERP
+- User roles and permissions
+
+## Evaluation Criteria
+1. Solution Fit
+2. Integration Capability
+3. Scalability
+4. Cost
+5. Support

@@ -2,6 +2,7 @@
 
 from src.models.openai_interface import call_openai_with_tracking
 import uuid
+from src.utils.logging_utils import log_phase, log_thought_score, log_result, print_tool_stats
 
 # --- Tree Node Class ---
 class TreeNode:
@@ -116,25 +117,25 @@ class SimpleToTAgent:
         frontier = [root]
 
         for depth in range(self.max_depth):
-            print(
+            log_phase(
                 f"\n🔁 Expanding depth {depth + 1}/{self.max_depth} — Frontier size: {len(frontier)}"
             )
             next_frontier = []
 
             for node in frontier:
                 thoughts = self.generate_thoughts(section, criterion, node)
-                print(f"💡 Thoughts generated from: '{node.thought}'")
-                print("\n".join(f"  → {t}" for t in thoughts))
+                log_phase(f"💡 Thoughts generated from: '{node.thought}'")
+                log_phase("\n".join(f"  → {t}" for t in thoughts))
 
                 if not thoughts:
-                    print("⚠️ No thoughts returned. Skipping.")
+                    log_phase("⚠️ No thoughts returned. Skipping.")
                     continue
 
                 child_nodes = [TreeNode(thought=t, parent=node) for t in thoughts]
                 top_children = self.evaluate_and_select(child_nodes)
 
                 for child in top_children:
-                    print(f"✅ Selected: {child.thought} (score: {child.score})")
+                    log_phase(f"✅ Selected: {child.thought} (score: {child.score})")
 
                 node.children.extend(top_children)
                 next_frontier.extend(top_children)
@@ -142,7 +143,7 @@ class SimpleToTAgent:
             frontier = next_frontier
 
             if not frontier:
-                print("⚠️ No more frontier nodes. Stopping early.")
+                log_phase("⚠️ No more frontier nodes. Stopping early.")
                 break
 
         if frontier:
@@ -214,14 +215,16 @@ def score_thought_with_openai(thought, criterion, section, model="gpt-3.5-turbo"
     messages = [{"role": "user", "content": prompt}]
     response = call_openai_with_tracking(messages, model=model, temperature=0)
 
-    print("\n🧠 Scoring Thought:")
-    print(f"→ {thought}")
-    print(f"📩 LLM Response: {response}")
+    log_phase("\n🧠 Scoring Thought:")
+    log_phase(f"→ {thought}")
+    log_phase(f"📩 LLM Response: {response}")
 
     try:
         score = int(response.strip())
-        print(f"✅ Parsed Score: {score}/10")
+        log_phase(f"✅ Parsed Score: {score}/10")
+        log_thought_score(thought, score)
         return score
     except ValueError:
-        print("⚠️ Failed to parse score, using fallback score = 5")
+        log_phase("⚠️ Failed to parse score, using fallback score = 5")
+        log_thought_score(thought, 5)
         return 5

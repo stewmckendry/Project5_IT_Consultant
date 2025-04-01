@@ -6,6 +6,7 @@ from src.models.openai_interface import call_openai_with_tracking
 from src.utils.tools.tool_catalog_RFP import tool_catalog
 import uuid
 from src.utils.file_loader import preprocess_proposal_for_criteria_with_threshold
+from src.utils.logging_utils import log_phase, log_result, print_tool_stats
 
 
 def evaluate_proposal(proposal_text, rfp_criteria, model="gpt-3.5-turbo"):
@@ -39,17 +40,17 @@ def evaluate_proposal(proposal_text, rfp_criteria, model="gpt-3.5-turbo"):
         - swot_summary (str): A SWOT assessment of the proposal.
     """
     
-    print("🔍 Preprocessing proposal...")
     matched_sections = preprocess_proposal_for_criteria_with_threshold(
         proposal_text=proposal_text,
         rfp_criteria=rfp_criteria,
         score_threshold=0.4  # you can tune this
     )
+    log_phase("✅ Proposal preprocessed = parse content by criteria.")
 
     results = []
 
     for criterion in rfp_criteria:
-        print(f"\n=== Evaluating: {criterion} ===")
+        log_phase(f"\n=== Evaluating: {criterion} ===")
         section_text = matched_sections.get(criterion, "")
 
         # Step 1: Run ToT for reasoning path to generate thoughts (questions) by criterion

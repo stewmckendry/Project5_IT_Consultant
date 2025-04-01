@@ -8,6 +8,7 @@ from typing import Dict
 import PyPDF2
 from src.utils.rfp_extractors import extract_evaluation_criteria
 import re
+from src.utils.logging_utils import log_phase
 
 def load_report_text_from_file(filepath):
     """
@@ -146,3 +147,43 @@ def preprocess_proposal_for_criteria_with_threshold(
         matched_sections[criterion] = "\n\n".join(relevant_paragraphs)
 
     return matched_sections
+
+
+def load_scenario_data(scenario_name, base_path: Path = Path("data/rfp_scenarios")):
+    scenario_dir = base_path / scenario_name
+    rfp_file = scenario_dir / "rfp.txt"
+
+    # Load all vendor proposals (everything except rfp.txt)
+    proposals = {}
+    for file in scenario_dir.glob("*.txt"):
+        if file.name != "rfp.txt":
+            vendor = file.stem.replace("_", " ").title()
+            proposals[vendor] = file.read_text()
+
+    return proposals, str(rfp_file)
+
+
+DEFAULT_SCENARIO = "scenario1_basic"
+DEFAULT_SCENARIO_DIR = Path("data/rfp_scenarios")
+
+
+def load_default_scenario(scenario_name: str = DEFAULT_SCENARIO) -> tuple[dict, str]:
+    """
+    Loads RFP and vendor proposals from a named scenario folder.
+
+    Parameters:
+        scenario_name (str): Folder name under data/rfp_scenarios (e.g., "basic_test").
+
+    Returns:
+        proposals (dict): {vendor_name: proposal_text}
+        rfp_path (str): Path to the scenario's RFP file
+    """
+    log_phase(f"📁 Loading scenario: {scenario_name}")
+    proposals, rfp_file = load_scenario_data(scenario_name, base_path=DEFAULT_SCENARIO_DIR)
+
+    log_phase(f"✅ Loaded {len(proposals)} proposals and RFP from {rfp_file}")
+    return proposals, rfp_file
+
+def list_available_scenarios(base_path: Path = DEFAULT_SCENARIO_DIR):
+    return [f.name for f in base_path.iterdir() if f.is_dir()]
+

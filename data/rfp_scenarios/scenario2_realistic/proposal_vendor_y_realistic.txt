@@ -1,0 +1,5 @@
+Our solution, InsightCloud, is built for enterprises needing real-time data analysis. It integrates with Azure and most BI tools.
+
+InsightCloud scales automatically and supports custom data pipelines. Pricing starts at $30K annually, with an all-inclusive support package.
+
+We offer dedicated onboarding, LMS training modules, and account managers to ensure smooth implementation.
