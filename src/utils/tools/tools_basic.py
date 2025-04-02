@@ -35,7 +35,7 @@ def check_guideline_archived(topic):
     return best_practices_archived.get(topic.lower(), "No matching guideline found.")
 
 
-def check_guideline_dynamic(topic, agent):
+def check_guideline_dynamic(agent, input_arg):
     """
     Dynamically checks for guidelines on a given topic using public knowledge sources
     (Wikipedia → SerpAPI → arXiv), then summarizes using LLM.
@@ -52,7 +52,7 @@ def check_guideline_dynamic(topic, agent):
 
     # Try Wikipedia
     try:
-        wiki_result = search_wikipedia(topic)
+        wiki_result = search_wikipedia(input_arg)
         if wiki_result and "⚠️" not in wiki_result:
             content = wiki_result
             source = "Wikipedia"
@@ -62,7 +62,7 @@ def check_guideline_dynamic(topic, agent):
     # If Wikipedia fails, try SerpAPI
     if not content:
         try:
-            serp_result = search_serpapi(topic)
+            serp_result = search_serpapi(input_arg)
             if serp_result and "⚠️" not in serp_result:
                 content = serp_result
                 source = "SerpAPI"
@@ -72,7 +72,7 @@ def check_guideline_dynamic(topic, agent):
     # If SerpAPI fails, try arXiv
     if not content:
         try:
-            arxiv_result = search_arxiv(topic, agent)
+            arxiv_result = search_arxiv(input_arg, agent)
             if arxiv_result and "⚠️" not in arxiv_result:
                 content = arxiv_result
                 source = "arXiv"
@@ -80,13 +80,13 @@ def check_guideline_dynamic(topic, agent):
             return f"⚠️ Failed to find guidance from any public source. Error: {str(e)}"
 
     if not content:
-        return f"⚠️ No guidance found for '{topic}' from Wikipedia, SerpAPI, or arXiv."
+        return f"⚠️ No guidance found for '{input_arg}' from Wikipedia, SerpAPI, or arXiv."
 
     # Summarize the content into clear guidance using LLM
     summary_prompt = [
         {
             "role": "user",
-            "content": f"Summarize any relevant best practices or guidelines for the topic:\n\n{topic}\n\nBased on the following source ({source}):\n\n{content}"
+            "content": f"Summarize any relevant best practices or guidelines for the topic:\n\n{input_arg}\n\nBased on the following source ({source}):\n\n{content}"
         }
     ]
     summary = call_openai_with_tracking(summary_prompt, model=agent.model)

@@ -70,7 +70,7 @@ from src.utils.tools.tools_RFP_fit import (
     evaluate_demos_and_proofs
 )
 
-from src.utils.tools.tool_registry import TOOL_FUNCTION_MAP
+from src.utils.tools.tool_dispatch import TOOL_FUNCTION_MAP
 from src.utils.logging_utils import log_phase, log_tool_used, log_tool_execution, log_tool_failed
 import time
 
@@ -206,6 +206,7 @@ class ReActConsultantAgent:
         """
         self.section_name = criterion
         self.section_text = section_text
+        self.full_proposal_text = full_proposal_text
 
         # Generate embedding-based tool hints
         if tool_embeddings:
@@ -216,25 +217,32 @@ class ReActConsultantAgent:
                 tool_embeddings=tool_embeddings
             )
         else:
-            tool_hint_text = build_tool_hint_text_forRFPeval(criterion)  # if no embeddings, use static hints from criterion_tool_map
+            tool_hint_text = "None. Pick from Available Tools below."
 
         # Build the base prompt
         thoughts_text = "\n".join(thoughts) if thoughts else "[Start your own reasoning]"
         base_prompt = (
-            f"You are a technology advisor reviewing a vendor proposal for a client RFP.\n\n"
-            f"📝 Criterion: {criterion}\n\n"
-            f"The client cares about cost-effectiveness, performance, security, trust, and ease of implementation.\n\n"
-            f"Start from the following evaluation question:\n"
-            f"{thoughts_text}\n\n"
-            f"Format your response:\n"
-            f"Thought: <your reasoning>\n"
-            f"Action: <choose ONE tool from the list below>\n\n"
-            f"⭐ Top tools for this task:\n{tool_hint_text}\n\n"
-            f"🧰 Full tool catalog:\n{format_tool_catalog_for_prompt(tool_catalog)}\n\n"
-            f"📄 Proposal Content Relevant to Criterion:\n{self.section_text}\n\n"
-            f"📄 Full Proposal:\n{self.full_proposal_text}\n\n"
-        )
+                f"You are a technology advisor evaluating a vendor proposal against the following RFP criterion:\n"
+                f"**{criterion}**\n\n"
+                f"The client cares about cost-effectiveness, performance, security, trust, and ease of implementation.\n\n"
+                f"Based on the proposal content below, begin your evaluation with a short thought and then choose an action.\n"
+                f"Use the tool that best supports your analysis.\n\n"
+                f"💡 Thoughts to consider:\n{thoughts_text}\n\n"
+                f"🛠️ Format your response like this:\n"
+                f"Thought: <your thought>\n"
+                f"Action: <one of the tools below>\n\n"
+                f"⭐ Recommended tools for this task:\n{tool_hint_text}\n\n"
+                f"🧰 Available tools (pick one exactly as shown):\n{format_tool_catalog_for_prompt(tool_catalog)}\n\n"
+                f"⚠️ Rules:\n"
+                f"- DO NOT invent or explain actions.\n"
+                f"- ONLY choose one tool from the list above.\n"
+                f"- If no tool fits, use: `summarize`, `ask_question`, or `tool_help`.\n"
+                f"- DO NOT output anything else.\n\n"
+                f"📄 Section relevant to this criterion:\n{self.section_text}\n\n"
+                f"📄 Full Proposal Text:\n{self.full_proposal_text}\n\n"
+            )
 
+        base_prompt += "Previous Thoughts, Actions & Observations:\n"
         for step in self.history:
             base_prompt += f"Thought: {step['thought']}\n"
             base_prompt += f"Action: {step['action']}\n"
@@ -353,7 +361,7 @@ def run_single_react_step(agent, thought, action, step_num=0):
     return observation
 
 
-def dispatch_tool_action(agent, action, report_sections=None, tool_map=None):
+def dispatch_tool_action(agent, action, report_sections=None, tool_map=None, raise_errors=False):
     """
     Dispatches and executes the appropriate tool function based on the action string.
 
@@ -361,6 +369,8 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None):
         agent (ReActConsultantAgent): The reasoning agent with context.
         action (str): Action string (e.g., tool_name["some input"]).
         report_sections (dict): Optional full report for context.
+        tool_map (dict): Optional override of registered tool functions.
+        raise_errors (bool): If True, re-raises exceptions (for debugging).
 
     Returns:
         str: Result from the tool or error message.
@@ -369,7 +379,7 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None):
     tool_map = tool_map or TOOL_FUNCTION_MAP
 
     try:
-        # Match action like tool_name["input text"]
+        # Parse action string like tool_name["input string"]
         match = re.match(r'^([a-zA-Z0-9_]+)(\["(.*)"\])?$', action)
         if not match:
             log_tool_failed("unknown_tool", f"Could not parse tool action: {action}")
@@ -382,31 +392,29 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None):
             log_tool_failed(tool_name, f"Tool '{tool_name}' not recognized.")
             return f"⚠️ Tool '{tool_name}' not recognized in TOOL_FUNCTION_MAP."
 
-        tool_fn = tool_map[tool_name]
+        tool_entry = tool_map[tool_name]
+        tool_fn = tool_entry["fn"]
+        arg_spec = tool_entry.get("args", [])
+ 
+        # Log argument types
         log_tool_used(tool_name)
+        log_phase(f"🔍 Dispatching {tool_name} with args: {arg_spec}")
+        log_tool_execution(tool_name, tool_fn, input_arg, agent)
 
-        # Determine function signature
-        if input_arg:
-            log_tool_execution(tool_name, tool_fn, input_arg, agent)
-            # Function expects an input string + agent (typical case)
-            try:
-                return tool_fn(input_arg, agent)
-            except TypeError:
-                log_tool_failed(tool_name, f"Tool '{tool_name}' failed with input: {input_arg}")
-                # Some tools may only take 1 arg
-                return tool_fn(input_arg)
+        # Call variants
+        if arg_spec == ["agent"]:
+            return tool_fn(agent)
+        elif arg_spec == ["input_arg"]:
+            return tool_fn(input_arg)
+        elif arg_spec == ["agent", "input_arg"]:
+            return tool_fn(agent, input_arg)
         else:
-            log_tool_execution(tool_name, tool_fn, None, agent)
-            # Function expects just agent
-            try:
-                return tool_fn(agent)
-            except TypeError:
-                log_tool_failed(tool_name, f"Tool '{tool_name}' execution failed with no input.")
-                return tool_fn()
-
+            raise ValueError(f"Unsupported arg spec for tool '{tool_name}': {arg_spec}")
     except Exception as e:
-        log_tool_failed(action, f"Tool execution error: {str(e)}")
-        return f"⚠️ Tool execution error: {str(e)}"
+        log_tool_failed(tool_name, f"{tool_name} dispatch failed: {e}")
+        if raise_errors:
+            raise
+        return f"⚠️ Tool execution error: {e}"
 
 
 def select_best_tool_with_llm(agent, criterion, top_thoughts, model="gpt-3.5-turbo"):
@@ -444,6 +452,7 @@ def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_te
         log_phase(f"Prompt for LLM: {messages}")
 
         # Run LLM
+        if agent.section_text is None: raise ValueError("Section text is None.")
         response = call_openai_with_tracking(messages, model=agent.model, temperature=agent.temperature)
 
         log_phase(f"LLM response: {response}")
@@ -461,7 +470,7 @@ def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_te
         
         # Run tool
         try:
-            observation = dispatch_tool_action(agent, action, report_sections=report_sections)
+            observation = dispatch_tool_action(agent, action, report_sections=report_sections, raise_errors=True)
             log_phase(f"👀 Observation: {observation}")
             if observation is None:
                 observation = "⚠️ Tool returned no result."

@@ -3,6 +3,7 @@ from datetime import datetime
 from matplotlib import pyplot as plt
 import shutil
 import json
+from src.utils.logging_utils import openai_call_log
 
 def finalize_evaluation_run(output_dir="../outputs/proposal_eval_reports", logs_dir="logs", run_id=None):
     from src.utils import logging_utils  # adjust if needed
@@ -63,6 +64,8 @@ def finalize_evaluation_run(output_dir="../outputs/proposal_eval_reports", logs_
     summary_lines.append(f"- Completion Tokens: {token_summary['completion_tokens']}")
     summary_lines.append(f"- Total Tokens: {token_summary['total_tokens']}")
     summary_lines.append(f"- Estimated Cost ({token_summary['model']}): **${token_summary['estimated_cost_usd']:.4f} USD**")
+    summary_lines.append("\n## 💸 Prompt + Response Preview")
+    summary_lines.append(generate_openai_call_previews_md(n=20))
 
     # --- Write Summary File ---
     summary_path = logs_dir / f"eval_summary_{run_id}.md"
@@ -96,3 +99,78 @@ def _plot_bar(data_dict, output_file, title):
     plt.savefig(output_file)
     plt.close()
 
+
+def display_openai_call_summary(n=10):
+    from IPython.display import display, Markdown
+    from pandas import DataFrame
+
+    # Show call counts and token usage
+    df = DataFrame(openai_call_log)
+    if df.empty:
+        print("No OpenAI calls logged.")
+        return
+
+    summary = df.groupby("source")[["prompt_tokens", "completion_tokens"]].sum()
+    summary["total_tokens"] = summary.sum(axis=1)
+    summary["% of total"] = 100 * summary["total_tokens"] / summary["total_tokens"].sum()
+    display(Markdown("### 🔄 OpenAI Call Summary"))
+    display(summary.sort_values("total_tokens", ascending=False))
+
+    # Show a sample of calls
+    display(Markdown(f"### 📋 Sample Calls (first {n})"))
+    for i, row in df.head(n).iterrows():
+        display(Markdown(f"""\
+#### 🔹 Call #{i+1}
+- **Source:** {row['source']}
+- **Prompt tokens:** {row['prompt_tokens']}, Completion tokens: {row['completion_tokens']}
+
+**Prompt Preview**:
+{row['prompt'][:500]}
+**Response Preview**:
+{row['response'][:500]}
+"""))
+    
+def generate_openai_call_previews_md(n=20):
+    lines = []
+    lines.append(f"## 📋 Sample OpenAI Calls (first {n})")
+
+    if not openai_call_log:
+        lines.append("_No OpenAI calls logged._")
+        return "\n".join(lines)
+
+    for i, call in enumerate(openai_call_log[:n]):
+        lines.append(f"### 🔹 Call #{i + 1}")
+        lines.append(f"- **Source:** {call['source']}")
+        lines.append(f"- **Prompt tokens:** {call['prompt_tokens']}")
+        lines.append(f"- **Completion tokens:** {call['completion_tokens']}")
+
+        # Prompt preview
+        prompt_data = call["prompt"]
+        if isinstance(prompt_data, list):
+            prompt_preview = " ".join(m.get("content", "") for m in prompt_data if isinstance(m, dict))
+        else:
+            prompt_preview = str(prompt_data)
+        prompt_preview = prompt_preview.strip().replace("\n", " ")[:500]
+
+        # Response preview
+        response = call.get("response")
+        call_type = call.get("call_type", "")
+
+        if call_type == "chat.completion" and response and hasattr(response, "choices"):
+            response_text = response.choices[0].message.content
+        elif call_type == "embedding" and response and hasattr(response, "data"):
+            response_text = f"[Embedding vector of length {len(response.data[0].embedding)}]"
+        else:
+            response_text = "[No valid response or unknown type]"
+
+        response_preview = str(response_text).strip().replace("\n", " ")[:500]
+
+        lines.append("**Prompt Preview:**")
+        lines.append(f"```text\n{prompt_preview}...\n```")
+
+        lines.append("**Response Preview:**")
+        lines.append(f"```text\n{response_preview}...\n```")
+
+        lines.append("")  # spacing
+
+    return "\n".join(lines)

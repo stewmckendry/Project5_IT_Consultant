@@ -216,11 +216,6 @@ tool_catalog = {
 
 
     # --- Cost + Value ---
-    "analyze_cost_structure": {
-        "version": "1.0",
-        "description": "Breaks down cost types: fixed price, subscription, rate cards.",
-        "usage": "analyze_cost_structure"
-    },
     "check_value_for_money": {
         "version": "1.0",
         "description": "Evaluates whether the proposed price is reasonable given what's being offered.",

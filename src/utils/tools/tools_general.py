@@ -2,7 +2,7 @@ from src.models.openai_interface import call_openai_with_tracking
 from src.utils.tools.tools_web import search_external_sources
 from src.server.prompt_builders import build_dual_context_prompt
 
-def detect_boilerplate_or_marketing_fluff(agent) -> str:
+def detect_boilerplate_or_marketing_fluff(agent, input_arg) -> str:
     """
     Uses LLM to detect boilerplate or marketing-heavy language in a section.
     
@@ -23,6 +23,8 @@ Specifically, identify vague, generic, or promotional phrasing that does not con
 
 If any is found, list examples and suggest areas for improvement.
 If the section is clear and substantive, confirm that.
+
+Query: {input_arg}
 """
     prompt = build_dual_context_prompt(instructions, agent)
     messages = [{"role": "user", "content": prompt}]
@@ -33,7 +35,7 @@ If the section is clear and substantive, confirm that.
         return f"An error occurred while processing the request: {str(e)}"
 
 
-def evaluate_writing_clarity(agent) -> str:
+def evaluate_writing_clarity(agent, input_arg) -> str:
     instructions = f"""
 You are an expert editor helping assess a vendor's proposal writing.
 
@@ -43,6 +45,8 @@ Evaluate the following section for:
 3. Readability — Is it written in a straightforward, easy-to-follow way?
 
 Return a 2-3 sentence critique of the writing quality.
+
+Query: {input_arg}
 """
     prompt = build_dual_context_prompt(instructions, agent)
     messages = [{"role": "user", "content": prompt}]
@@ -53,7 +57,7 @@ Return a 2-3 sentence critique of the writing quality.
         return f"An error occurred while processing the request: {str(e)}"
 
 
-def check_fact_substantiation(agent) -> str:
+def check_fact_substantiation(agent, input_arg) -> str:
     section_text = agent.section_text
     full_proposal_text = agent.full_proposal_text
     summary_text = summarize_to_query(section_text)
@@ -66,6 +70,11 @@ Analyze whether the claims in the following text are:
 - Or vague/unsupported (marketing-style claims with no details)
 
 Return a short summary indicating which parts are substantiated and which are not.
+
+Query:
+{input_arg}
+
+_________________
 
 Section:
 {section_text}
@@ -91,7 +100,7 @@ Please evaluate whether the statement appears factually supported and identify a
         return f"An error occurred while processing the request: {str(e)}"
 
 
-def check_for_unsupported_assumptions(agent) -> str:
+def check_for_unsupported_assumptions(agent, input_arg) -> str:
     section_text = agent.section_text
     full_proposal_text = agent.full_proposal_text
     summary_text = summarize_to_query(section_text)  # corrected variable name
@@ -105,6 +114,10 @@ Analyze the section below and identify:
 3. Any concerns the client might have
 
 Return your findings in bullet points.
+
+Query:
+{input_arg}
+_________________
 
 Section:
 {section_text}

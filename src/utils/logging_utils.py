@@ -18,6 +18,7 @@ tool_failure_stats = defaultdict(int)    # failed calls
 tool_failure = {}
 thought_stats = defaultdict(int)
 thought_score_stats = defaultdict(int)
+openai_call_log = []
 openai_call_counter = 0
 openai_call_times = []
 openai_call_sources = defaultdict(int)
@@ -42,22 +43,45 @@ def log_thought_score(thought, score):
     thought_score_stats[score] += 1
     logger.debug(f"💭 Thought scored: {thought} with score {score}")
 
-def log_openai_call(prompt, response, source=None, prompt_tokens=0, completion_tokens=0):
+def log_openai_call(prompt, response, source=None, prompt_tokens=0, completion_tokens=0, embedding=True):
     global openai_call_counter
     openai_call_counter += 1
+
     if not source:
-        # Use caller name from call stack
-        stack = inspect.stack()
-        source = stack[1].function  # one level up
-    
+        # Automatically walk the stack to find the first external caller
+        for frame in inspect.stack()[1:]:
+            module = inspect.getmodule(frame.frame)
+            if module and not module.__name__.startswith("logging_utils"):
+                source = frame.function
+                break
+        else:
+            source = "unknown"
+
     openai_call_sources[source] += 1
     openai_prompt_token_usage_by_source[source] += prompt_tokens
     openai_completion_token_usage_by_source[source] += completion_tokens
-    logger.debug(
-        f"🔄 OpenAI call #{openai_call_counter} from {source}: "
-        f"{prompt[:50]}... -> {response[:50]}... "
-        f"(Prompt tokens: {prompt_tokens}, Completion tokens: {completion_tokens})"
-    )
+
+    # Store full log for deep analysis
+    openai_call_log.append({
+        "source": source,
+        "prompt": prompt,
+        "response": response,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens
+    })
+
+    if embedding:
+        log_msg = (
+            f"🔄 OpenAI call #{openai_call_counter} from {source}: "
+            f"Embedding call, no response logged and no token usage stats. "
+        )
+    else:
+        log_msg = (
+            f"🔄 OpenAI call #{openai_call_counter} from {source}: "
+            f"{prompt[:50]}... -> {str(response)[:50]}... "
+            f"(Prompt tokens: {prompt_tokens}, Completion tokens: {completion_tokens})"
+        )
+    logger.info(log_msg)
 
 
 def print_tool_stats():

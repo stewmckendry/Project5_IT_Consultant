@@ -1,7 +1,7 @@
 from src.models.openai_interface import call_openai_with_tracking
 from src.server.prompt_builders import build_dual_context_prompt
 
-def check_value_for_money(agent) -> str:
+def check_value_for_money(agent, input_arg) -> str:
     """
     Checks whether the proposed cost offers good value for the services and capabilities described.
     """
@@ -9,6 +9,9 @@ def check_value_for_money(agent) -> str:
         "Evaluate whether the cost described appears to offer good value for the services and features provided. "
         "Is the price appropriate for the scope and quality of the offering?\n\n"
         "Explain your reasoning based on best practices and common expectations for similar proposals.\n\n"
+        "Query: "
+        f"{input_arg}\n\n"
+        "------------------\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
     messages = [{"role": "user", "content": prompt}]
@@ -19,7 +22,7 @@ def check_value_for_money(agent) -> str:
         return f"An error occurred while processing the request: {str(e)}"
 
 
-def check_cost_benchmark(agent) -> str:
+def check_cost_benchmark(agent, input_arg) -> str:
     """
     Benchmarks the provided cost against typical pricing in the industry, if possible.
     """
@@ -27,6 +30,9 @@ def check_cost_benchmark(agent) -> str:
         "Based on your knowledge of industry norms and typical vendor pricing, is the proposed cost "
         "within a reasonable range? Mention whether it appears high, low, or typical compared to similar offerings.\n\n"
         "Explain your reasoning based on benchmarks, market trends, or comparable services.\n\n"
+        "Query: "
+        f"{input_arg}\n\n"
+        "------------------\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
     messages = [{"role": "user", "content": prompt}]
@@ -37,7 +43,7 @@ def check_cost_benchmark(agent) -> str:
         return f"An error occurred while processing the request: {str(e)}"
 
 
-def generate_cost_forecast(agent) -> str:
+def generate_cost_forecast(agent, input_arg) -> str:
     """
     Forecasts potential long-term or total costs based on the provided pricing structure and risk factors.
     """
@@ -46,6 +52,9 @@ def generate_cost_forecast(agent) -> str:
         "of the agreement. Consider any risk factors, missing details, or cost escalation possibilities. "
         "Mention if costs may vary based on user volume, modules selected, or client-provided responsibilities.\n\n"
         "Explain your reasoning.\n\n"
+        "Query: "
+        f"{input_arg}\n\n"
+        "------------------\n"
     )
     prompt = build_dual_context_prompt(instructions, agent)
     messages = [{"role": "user", "content": prompt}]

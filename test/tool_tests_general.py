@@ -2,7 +2,7 @@
 from src.server.react_agent import ReActConsultantAgent, dispatch_tool_action
 from src.utils.tools.tool_catalog_RFP import tool_catalog
 import pytest
-from src.utils.tools.tool_registry import TOOL_FUNCTION_MAP
+from src.utils.tools.tool_dispatch import TOOL_FUNCTION_MAP
 
 
 def test_tool(tool_name, input_text, section_name="Test Section"):
