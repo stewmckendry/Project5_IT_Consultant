@@ -155,21 +155,22 @@ def generate_openai_call_previews_md(n=20):
         # Response preview
         response = call.get("response")
         call_type = call.get("call_type", "")
-
-        if call_type == "chat.completion" and response and hasattr(response, "choices"):
-            response_text = response.choices[0].message.content
-        elif call_type == "embedding" and response and hasattr(response, "data"):
-            response_text = f"[Embedding vector of length {len(response.data[0].embedding)}]"
+        if call_type == "chat.completion":
+            try:
+                response_text = response["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError):
+                response_text = "[Malformed chat response]"
+        elif call_type == "embedding":
+            response_text = f"[Embedding vector of length {len(response['data'][0]['embedding'])}]"
         else:
             response_text = "[No valid response or unknown type]"
-
         response_preview = str(response_text).strip().replace("\n", " ")[:500]
 
         lines.append("**Prompt Preview:**")
-        lines.append(f"```text\n{prompt_preview}...\n```")
+        lines.append(f"```\n{prompt_preview}...\n```")
 
         lines.append("**Response Preview:**")
-        lines.append(f"```text\n{response_preview}...\n```")
+        lines.append(f"```\n{response_preview}...\n```")
 
         lines.append("")  # spacing
 

@@ -61,21 +61,28 @@ def log_openai_call(prompt, response, source=None, prompt_tokens=0, completion_t
     openai_prompt_token_usage_by_source[source] += prompt_tokens
     openai_completion_token_usage_by_source[source] += completion_tokens
 
-    # Store full log for deep analysis
-    openai_call_log.append({
-        "source": source,
-        "prompt": prompt,
-        "response": response,
-        "prompt_tokens": prompt_tokens,
-        "completion_tokens": completion_tokens
-    })
-
     if embedding:
+        openai_call_log.append({
+            "source": source,
+            "call_type": "embedding",
+            "prompt": prompt,
+            "response": response.model_dump(),
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens
+        })
         log_msg = (
             f"🔄 OpenAI call #{openai_call_counter} from {source}: "
             f"Embedding call, no response logged and no token usage stats. "
         )
     else:
+        openai_call_log.append({
+            "source": source,
+            "call_type": "chat.completion",
+            "prompt": prompt,
+            "response": response.model_dump(),
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens
+        })
         log_msg = (
             f"🔄 OpenAI call #{openai_call_counter} from {source}: "
             f"{prompt[:50]}... -> {str(response)[:50]}... "
