@@ -10,24 +10,29 @@ from src.utils.rfp_extractors import extract_evaluation_criteria
 import re
 from src.utils.logging_utils import log_phase
 
-def load_report_text_from_file(filepath):
+def load_report_text_from_file(filepath=None, file=None) -> str:
     """
     Loads text from a supported file format (txt, md, docx, pdf).
     """
-    ext = Path(filepath).suffix.lower()
+    if filepath:
+        ext = Path(filepath).suffix.lower()
+    elif file:
+        ext = Path(file.filename).suffix.lower()
+    else:
+        raise ValueError("Must provide either 'filepath' or 'file'")
 
     if ext in [".txt", ".md"]:
-        with open(filepath, "r", encoding="utf-8") as f:
-            return f.read()
+        content = file.file.read().decode("utf-8") if file else Path(filepath).read_text(encoding="utf-8")
     elif ext == ".docx":
-        doc = docx.Document(filepath)
-        return "\n".join([p.text for p in doc.paragraphs])
+        doc = docx.Document(file.file if file else filepath)
+        content = "\n".join(p.text for p in doc.paragraphs)
     elif ext == ".pdf":
-        doc = fitz.open(filepath)
-        return "\n".join([page.get_text() for page in doc])
+        doc = fitz.open(stream=file.file.read(), filetype="pdf") if file else fitz.open(filepath)
+        content = "\n".join([page.get_text() for page in doc])
     else:
         raise ValueError("Unsupported file format. Use .txt, .md, .docx, or .pdf")
-
+    
+    return content
 
 
 def load_proposals_from_folder(folder_path: str) -> Dict[str, str]:
@@ -200,3 +205,40 @@ def load_default_scenario(scenario_name: str = DEFAULT_SCENARIO) -> tuple[dict, 
 def list_available_scenarios(base_path: Path = DEFAULT_SCENARIO_DIR):
     return [f.name for f in base_path.iterdir() if f.is_dir()]
 
+
+from typing import List, Tuple, Dict
+from fastapi import UploadFile
+import tempfile
+from pathlib import Path
+
+def process_uploaded_files(files: List[UploadFile]) -> Tuple[Dict[str, str], str]:
+    """
+    Processes uploaded files and separates RFP from proposals.
+
+    Returns:
+        proposals (dict): {vendor_name: proposal_text}
+        rfp_path (str): Path to saved RFP file
+    """
+    temp_dir = Path(tempfile.mkdtemp(prefix="rfp_eval_"))
+    proposals = {}
+    rfp_path = None
+
+    for file in files:
+        contents = load_report_text_from_file(file=file)
+        filename = Path(file.filename).name.lower()
+
+        if "rfp" in filename:
+            rfp_path = temp_dir / "rfp.txt"
+            rfp_path.write_text(contents)
+        else:
+            vendor_name = Path(file.filename).stem.replace("_", " ").title()
+            proposal_path = temp_dir / file.filename
+            proposal_path.write_text(contents)
+            proposals[vendor_name] = contents
+        
+        log_phase(f"📎 Loaded {file.filename} → {'RFP' if 'rfp' in filename else 'Proposal'}")
+
+    if not rfp_path or not proposals:
+        raise ValueError("Missing RFP file or no proposals uploaded.")
+
+    return proposals, str(rfp_path)

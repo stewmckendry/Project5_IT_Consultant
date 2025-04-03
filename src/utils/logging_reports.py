@@ -6,46 +6,61 @@ import json
 from src.utils.logging_utils import openai_call_log, thought_dedup_stats
 from src.utils.thought_filtering import get_embedding_cache_stats
 import os
+from src.utils.logging_utils import (
+    log_phase,
+    tool_stats,
+    thought_score_stats,
+    tool_failure,
+    tool_failure_stats,
+    openai_call_counter,
+    openai_call_sources,
+    openai_prompt_token_usage_by_source,
+    openai_completion_token_usage_by_source,
+    calculate_token_usage_summary,
+    get_openai_call_avg_time)
+from src.utils.export_utils import convert_markdown_to_html_and_pdf_rfp
 
-def finalize_evaluation_run(output_dir="../outputs/proposal_eval_reports", logs_dir="logs", run_id=None, results=None):
-    from src.utils import logging_utils  # adjust if needed
+def finalize_evaluation_run(output_dir="../outputs/proposal_eval_reports", run_id=None, results=None):
+    log_phase("📊 Generating Logging Summary Report...")
     run_id = run_id or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    logs_dir = Path(logs_dir)
-    logs_dir.mkdir(exist_ok=True)
-    img_dir = logs_dir / "plots"
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    img_dir = output_dir / "plots"
     img_dir.mkdir(exist_ok=True)
 
+    # === Generate the content ===
     summary_lines = []
     summary_lines.append(f"# 📊 Evaluation Summary Report – `{run_id}`\n")
 
     # --- TOOL USAGE ---
     summary_lines.append("## 🔧 Tool Usage")
-    for tool, count in logging_utils.tool_stats.items():
+    for tool, count in tool_stats.items():
         summary_lines.append(f"- {tool}: {count} time(s)")
-    _plot_bar(logging_utils.tool_stats, img_dir / "tool_usage.png", "Tool Usage")
+    _plot_bar(tool_stats, img_dir / "tool_usage.png", "Tool Usage")
     summary_lines.append("![Tool Usage](plots/tool_usage.png)\n")
 
     # --- THOUGHT SCORE DIST ---
     summary_lines.append("## 💭 Thought Score Distribution")
-    for score, count in sorted(logging_utils.thought_score_stats.items(), reverse=True):
+    for score, count in sorted(thought_score_stats.items(), reverse=True):
         summary_lines.append(f"- Score {score}: {count} thought(s)")
-    _plot_bar(logging_utils.thought_score_stats, img_dir / "thought_scores.png", "Thought Scores")
+    _plot_bar(thought_score_stats, img_dir / "thought_scores.png", "Thought Scores")
     summary_lines.append("![Thought Scores](plots/thought_scores.png)\n")
 
     # --- ERRORS ---
-    log_path = logs_dir / "log_file.log"
+    log_path = output_dir / "log_file.log"
     summary_lines.append(generate_log_health_md(log_path))
 
     # --- FAILURES ---
     summary_lines.append("## ❗ Tool Failures")
-    for tool, reason in logging_utils.tool_failure.items():
+    for tool, reason in tool_failure.items():
         summary_lines.append(f"- {tool}: {reason}")
     summary_lines.append("\n---\n")
     
     # --- TOOL SUCCESS RATES ---
     summary_lines.append("## ✅ Tool Success Rates")
-    for tool, total in logging_utils.tool_stats.items():
-        fail = logging_utils.tool_failure_stats.get(tool, 0)
+    for tool, total in tool_stats.items():
+        fail = tool_failure_stats.get(tool, 0)
         success = total - fail
         rate = (success / total) * 100 if total else 0
         summary_lines.append(f"- {tool}: {success}/{total} successful ({rate:.1f}%)")
@@ -75,21 +90,21 @@ def finalize_evaluation_run(output_dir="../outputs/proposal_eval_reports", logs_
     
     # --- OPENAI CALLS ---
     summary_lines.append("## 🔄 OpenAI API Calls")
-    summary_lines.append(f"- Total Calls: {logging_utils.openai_call_counter}")
-    avg_time = logging_utils.get_openai_call_avg_time()
+    summary_lines.append(f"- Total Calls: {openai_call_counter}")
+    avg_time = get_openai_call_avg_time()
     summary_lines.append(f"- Average Time: {avg_time:.2f} sec")
     summary_lines.append("\n---\n")
     summary_lines.append(f"- OpenAI Call Sources & Token Usage")
-    for src, count in logging_utils.openai_call_sources.items():
-        prompt_tokens = logging_utils.openai_prompt_token_usage_by_source.get(src, 0)
-        completion_tokens = logging_utils.openai_completion_token_usage_by_source.get(src, 0)
+    for src, count in openai_call_sources.items():
+        prompt_tokens = openai_prompt_token_usage_by_source.get(src, 0)
+        completion_tokens = openai_completion_token_usage_by_source.get(src, 0)
         total_tokens = prompt_tokens + completion_tokens
         summary_lines.append(
             f"- **{src}**: {count} call(s), "
             f"{prompt_tokens} prompt tokens, {completion_tokens} completion tokens "
             f"(total {total_tokens})"
         )
-    token_summary = logging_utils.calculate_token_usage_summary(model="gpt-3.5-turbo")
+    token_summary = calculate_token_usage_summary(model="gpt-3.5-turbo")
     summary_lines.append("\n---\n")
     summary_lines.append("\n## 💸 Token Usage Summary")
     summary_lines.append(f"- Prompt Tokens: {token_summary['prompt_tokens']}")
@@ -101,22 +116,19 @@ def finalize_evaluation_run(output_dir="../outputs/proposal_eval_reports", logs_
     summary_lines.append(generate_openai_call_previews_md(n=20))
 
     # --- Write Summary File ---
-    summary_path = logs_dir / f"eval_summary_{run_id}.md"
-    summary_path.write_text("\n".join(summary_lines))
-    print(f"✅ Summary saved to: {summary_path}")
+    summary_path = output_dir / f"logging_summary_report_{run_id}.md"
+    summary_path.write_text("\n".join(summary_lines), encoding="utf-8")
+    log_phase(f"✅ Logging Summary saved to: {summary_path}")
 
-    # --- Zip Logs + Outputs ---
-    archive_name = f"eval_archive_{run_id}"
-    archive_path = shutil.make_archive(archive_name, "zip", root_dir=".", base_dir=output_dir)
-    final_zip = logs_dir / f"{archive_name}.zip"
-    shutil.move(archive_path, final_zip)
-    print(f"✅ Zipped outputs to: {final_zip}")
+    # --- Convert to HTML and PDF ---
+    html_path, pdf_path = convert_markdown_to_html_and_pdf_rfp(summary_path)
 
     return {
-        "summary_path": summary_path,
-        "plots_dir": img_dir,
-        "zip_path": final_zip
+        "markdown": summary_path,
+        "html": html_path,
+        "pdf": pdf_path
     }
+
 
 # Plot helper
 def _plot_bar(data_dict, output_file, title):

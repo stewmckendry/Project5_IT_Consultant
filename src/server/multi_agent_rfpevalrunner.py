@@ -1,4 +1,7 @@
 from pathlib import Path
+import os
+from typing import Dict, List
+from datetime import datetime
 from src.server.proposal_eval import evaluate_proposal
 from src.utils.export_utils import export_proposal_report, save_markdown_and_pdf
 from src.server.final_eval_summary import generate_final_comparison_summary
@@ -30,8 +33,9 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = Non
     assert rfp_criteria, "No RFP criteria provided or extracted."
 
     # Prepare output folders
-    project_root = Path.cwd().parent
-    outputs_dir = project_root / "outputs" / "proposal_eval_reports"
+    run_id = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    base_output = os.getenv("OUTPUT_DIR", "outputs")
+    outputs_dir = Path(base_output) / "proposal_eval_reports" / run_id  
     outputs_dir.mkdir(parents=True, exist_ok=True)
 
     all_vendor_evaluations = []
@@ -65,15 +69,16 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = Non
 
     # Log analytics report
     all_results = [r for vendor in all_vendor_evaluations for r in vendor["results"]]
-    log_report_meta = finalize_evaluation_run(results=all_results)
+    log_report_path= finalize_evaluation_run(results=all_results)
 
     return {
+        "run_id": run_id,
         "rfp_info": rfp_info,
         "evaluations": all_vendor_evaluations,
         "final_summary_text": final_summary_text,
         "file_paths": {
             "proposal_reports": proposal_reports,
             "final_summary": final_summary_paths,
-            "log_summary": log_report_meta["paths"]
+            "log_summary": log_report_path
         }
     }
