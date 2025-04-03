@@ -6,7 +6,8 @@ tool_catalog = {
         "usage": 'check_alignment["modular EHR platform aligns with scalability needs"]',
         "examples": [
             'check_alignment["timeline aligns with phased rollout for primary care clinics"]'
-        ]
+        ],
+        "section": "General"
     },
     "highlight_missing_sections": {
         "version": "1.0",
@@ -14,7 +15,8 @@ tool_catalog = {
         "usage": "highlight_missing_sections",
         "examples": [
             'highlight_missing_sections["The proposal lacks a detailed risk management plan."]'
-        ]
+        ],
+        "section": "General"
     },
     "keyword_match": {
         "version": "1.0",
@@ -22,7 +24,8 @@ tool_catalog = {
         "usage": 'keyword_match["privacy compliance"]',
         "examples": [
             'keyword_match["data privacy compliance"]'
-        ]
+        ],
+        "section": "General"
     },
     "check_summary_support": {
         "version": "1.0",
@@ -30,7 +33,8 @@ tool_catalog = {
         "usage": "check_summary_support",
         "examples": [
             'check_summary_support["The vendor has a strong track record in healthcare."]'
-        ]
+        ],
+        "section": "General" 
     },
     "check_section_structure": {
         "version": "1.0",
@@ -38,7 +42,8 @@ tool_catalog = {
         "usage": "check_section_structure",
         "examples": [
             'check_section_structure["The proposal is organized into clear sections with headings."]'
-        ]
+        ], 
+        "section": "General"
     },
 
     # --- Methodology + Delivery Lifecycle ---
@@ -48,7 +53,8 @@ tool_catalog = {
         "usage": 'check_agile_compatibility["We use agile with fixed-price milestones and client-approved sprints."]',
         "examples": [
             'check_agile_compatibility["Our agile approach is structured with upfront planning, sprint-based delivery, and cost tracking tied to deliverables."]'
-        ]
+        ],
+        "section": "Methodology"
     },
     "check_accelerators_and_tools": {
         "version": "1.0",
@@ -56,7 +62,8 @@ tool_catalog = {
         "usage": 'check_accelerators_and_tools["We use our proven set of templates and automation tools for rapid deployment."]',
         "examples": [
             'check_accelerators_and_tools["Our proprietary DevOps toolchain automates testing, code review, and deployment with standardized playbooks."]'
-        ]
+        ], 
+        "section": "Methodology"
     },
     "evaluate_collaboration_approach": {
         "description": "Evaluates whether the proposal's team or delivery model promotes a strong, collaborative partnership.",
@@ -64,15 +71,17 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'evaluate_collaboration_approach["Our team will work in daily stand-ups with the client team."]'
-        ]
+        ],
+        "section": "Methodology"
     },
     "check_discovery_approach": {
-    "version": "1.0",
-    "description": "Evaluates whether the Discovery phase methodology is clear, structured, and stakeholder-driven.",
-    "usage": 'check_discovery_approach["Discovery will begin with stakeholder interviews and current state assessment."]',
-    "examples": [
-        'check_discovery_approach["Our discovery approach includes stakeholder workshops, baseline capability assessment, and early risk identification."]'
-    ]
+        "version": "1.0",
+        "description": "Evaluates whether the Discovery phase methodology is clear, structured, and stakeholder-driven.",
+        "usage": 'check_discovery_approach["Discovery will begin with stakeholder interviews and current state assessment."]',
+        "examples": [
+            'check_discovery_approach["Our discovery approach includes stakeholder workshops, baseline capability assessment, and early risk identification."]'
+        ],
+        "section": "Methodology"
     },
     "check_requirements_approach": {
         "version": "1.0",
@@ -80,7 +89,8 @@ tool_catalog = {
         "usage": 'check_requirements_approach["We gather requirements via workshops and trace them to solution components."]',
         "examples": [
             'check_requirements_approach["We use user stories, process mapping, and MoSCoW prioritization with business and technical stakeholders."]'
-        ]
+        ],
+        "section": "Methodology"
     },
     "check_design_approach": {
         "version": "1.0",
@@ -88,7 +98,8 @@ tool_catalog = {
         "usage": 'check_design_approach["We use iterative design with wireframes and architecture review boards."]',
         "examples": [
             'check_design_approach["System design includes technical diagrams, UX prototyping, security review, and traceability to requirements."]'
-        ]
+        ],
+        "section": "Methodology"
     },
     "check_build_approach": {
         "version": "1.0",
@@ -96,7 +107,8 @@ tool_catalog = {
         "usage": 'check_build_approach["We will develop using agile sprints and DevSecOps practices."]',
         "examples": [
             'check_build_approach["Development will follow agile iterations, with automated code checks, daily standups, and CI/CD pipelines."]'
-        ]
+        ],
+        "section": "Methodology"
     },
     "check_test_approach": {
         "version": "1.0",
@@ -104,7 +116,8 @@ tool_catalog = {
         "usage": 'check_test_approach["We will conduct UAT and regression testing using automation tools and JIRA tracking."]',
         "examples": [
             'check_test_approach["Our test strategy includes unit, system, integration, and UAT, supported by automation frameworks and traceability to requirements."]'
-        ]
+        ],
+        "section": "Methodology"
     },
     "check_deployment_approach": {
         "version": "1.0",
@@ -112,7 +125,8 @@ tool_catalog = {
         "usage": 'check_deployment_approach["We use a phased rollout with go/no-go gates and rollback procedures."]',
         "examples": [
             'check_deployment_approach["Deployment includes stakeholder training, communication plan, and rollback strategy."]'
-        ]
+        ],
+        "section": "Methodology"
     },
     "check_operate_approach": {
         "version": "1.0",
@@ -120,7 +134,8 @@ tool_catalog = {
         "usage": 'check_operate_approach["Post-deployment support includes SLAs, incident tracking, and quarterly feedback reviews."]',
         "examples": [
             'check_operate_approach["We offer 24x7 support, monthly reports, continuous feedback collection, and enhancement sprints."]'
-        ]
+        ],
+        "section": "Methodology"
     },
 
     # --- Team + Resources ---
@@ -131,7 +146,8 @@ tool_catalog = {
             'check_team_experience_alignment["Our project manager has 20 years of experience in public sector digital health projects..."]',
             'check_team_experience_alignment["The proposed development team has worked on multiple EHR implementations across North America..."]'
         ],
-        "version": "v1"
+        "version": "v1",
+        "section": "Team"
     },
     "detect_bait_and_switch_risk": {
         "description": "Identifies signs that the proposed team may not be the one actually staffed on the project.",
@@ -140,9 +156,9 @@ tool_catalog = {
             'detect_bait_and_switch_risk["We will provide qualified team members at the appropriate time during implementation."]',
             'detect_bait_and_switch_risk["Exact individuals to be confirmed post-award, depending on availability."]'
         ],
-        "version": "v1"
+        "version": "v1",
+        "section": "Team"
     },
-
     "check_local_resource_presence": {
         "description": "Checks if vendor proposes to use local/on-site resources, which clients often value.",
         "usage": "check_local_resource_presence[section text]",
@@ -150,7 +166,8 @@ tool_catalog = {
             'check_local_resource_presence["Our team will be based in Toronto and will work from the client’s office 3 days per week."]',
             'check_local_resource_presence["Key resources will work remotely, with travel to client site only as needed."]'
         ],
-        "version": "v1"
+        "version": "v1",
+        "section": "Team"
     },
 
     # --- Vendor Experience ---
@@ -160,7 +177,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'check_vendor_experience_relevance["We deployed our platform across 12 regional health networks..."]'
-        ]
+        ],
+        "section": "Vendor Experience"
     },
     "check_vendor_experience_evidence": {
         "description": "Checks for concrete evidence of vendor experience, such as client names, success metrics, or case studies.",
@@ -168,7 +186,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'check_vendor_experience_evidence["Client success: Reduced hospital readmission rates by 18%..."]'
-        ]
+        ],
+        "section": "Vendor Experience"
     },
 
     # --- Implementation Plan ---
@@ -178,7 +197,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'check_implementation_milestones["The project will follow a phased approach including onboarding, integration, testing, and go-live."]'
-        ]
+        ],
+        "section": "Implementation Plan"
     },
     "check_resource_plan_realism": {
         "description": "Evaluates whether the proposed resource plan is realistic for the work described.",
@@ -186,7 +206,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'check_resource_plan_realism["We will assign one project manager and four developers for a 12-month nationwide rollout."]'
-        ]
+        ],
+        "section": "Implementation Plan"
     },
     "check_assumption_reasonableness": {
         "description": "Evaluates whether the stated assumptions in the proposal are reasonable.",
@@ -194,7 +215,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'check_assumption_reasonableness["We assume all data will be clean, structured, and available via API on day one."]'
-        ]
+        ],
+        "section": "Implementation Plan"
     },
     "check_timeline_feasibility": {
         "version": "1.0",
@@ -202,7 +224,8 @@ tool_catalog = {
         "usage": 'check_timeline_feasibility["The project will be completed in 12 weeks."]',
         "examples": [
             'check_timeline_feasibility["The implementation is expected to take 18 months with phases including design, development, testing, and rollout."]'
-        ]
+        ],
+        "section": "Implementation Plan"
     },
     "check_contingency_plans": {
         "version": "1.0",
@@ -210,7 +233,8 @@ tool_catalog = {
         "usage": 'check_contingency_plans["In case of delay, we will adjust testing timelines and increase staffing to maintain go-live."]',
         "examples": [
             'check_contingency_plans["We will maintain a risk log and have weekly project health check-ins to identify mitigation options early."]'
-        ]
+        ],
+        "section": "Implementation Plan"
     },
 
 
@@ -222,7 +246,8 @@ tool_catalog = {
         "usage": 'check_value_for_money["The platform costs $500K and includes hosting, support, and training."]',
         "examples": [
             'check_value_for_money["The platform costs $2M upfront and $200K per year. It includes minimal support."]'
-        ]
+        ],
+        "section": "Cost"
     },
     "check_cost_benchmark": {
         "version": "1.0",
@@ -230,7 +255,8 @@ tool_catalog = {
         "usage": 'check_cost_benchmark["The vendor proposes $15/user/month for access to all modules."]',
         "examples": [
             'check_cost_benchmark["$500K onboarding fee with $100/user/month for core access."]'
-        ]
+        ],
+        "section": "Cost"
     },
     "generate_cost_forecast": {
         "version": "1.0",
@@ -238,7 +264,8 @@ tool_catalog = {
         "usage": 'generate_cost_forecast["$20/user/month, with client responsible for training and data migration."]',
         "examples": [
             'generate_cost_forecast["Pricing is based on tiered volume, with annual escalators and optional modules."]'
-        ]
+        ],
+        "section": "Cost"
     },
 
     # --- Risk Management ---
@@ -248,7 +275,8 @@ tool_catalog = {
         "usage": 'check_data_privacy_and_security_measures["Data is encrypted and hosted in a compliant cloud."]',
         "examples": [
             'check_data_privacy_and_security_measures["SOC 2 certified, HIPAA compliant, role-based access control."]'
-        ]
+        ],
+        "section": "Risk Management"
     },
     "check_risk_register_or_mitigation_plan": {
         "version": "1.0",
@@ -256,7 +284,8 @@ tool_catalog = {
         "usage": 'check_risk_register_or_mitigation_plan["The vendor identifies integration delays and provides fallback options."]',
         "examples": [
             'check_risk_register_or_mitigation_plan["Risks are captured in a matrix with probability and impact."]'
-        ]
+        ],
+        "section": "Risk Management"
     },
     "check_compliance_certifications": {
         "version": "1.0",
@@ -264,7 +293,8 @@ tool_catalog = {
         "usage": 'check_compliance_certifications["The solution is ISO 27001 and SOC 2 Type II certified."]',
         "examples": [
             'check_compliance_certifications["HIPAA compliant, verified annually by third party audit."]'
-        ]
+        ],
+        "section": "Risk Management"
     },
 
 
@@ -275,7 +305,8 @@ tool_catalog = {
         "usage": 'evaluate_product_fit["Our platform automates intake and scheduling."]',
         "examples": [
             'evaluate_product_fit["Supports real-time patient lookup and appointment routing."]'
-        ]
+        ],
+        "section": "Solution Fit"
     },
     "evaluate_nfr_support": {
         "version": "1.0",
@@ -283,7 +314,8 @@ tool_catalog = {
         "usage": 'evaluate_nfr_support["We use AES-256 encryption, WCAG 2.1 AA-compliant interfaces, and SLA-backed uptime."]',
         "examples": [
             'evaluate_nfr_support["Data is encrypted and access is role-restricted."]'
-        ]
+        ],
+        "section": "Solution Fit"
     },
     "evaluate_modularity_and_scalability": {
         "version": "1.0",
@@ -291,7 +323,8 @@ tool_catalog = {
         "usage": 'evaluate_modularity_and_scalability["Modules can be independently deployed and scaled across regions."]',
         "examples": [
             'evaluate_modularity_and_scalability["Supports multi-tenant deployments and horizontal scaling."]'
-        ]
+        ],
+        "section": "Solution Fit"
     },
     "check_product_roadmap": {
         "version": "1.0",
@@ -299,7 +332,8 @@ tool_catalog = {
         "usage": 'check_product_roadmap["Roadmap includes support for AI triage, real-time collaboration, and national integration."]',
         "examples": [
             'check_product_roadmap["We plan to add predictive analytics and FHIR-native APIs in 2025."]'
-        ]
+        ],
+        "section": "Solution Fit"
     },
     "evaluate_demos_and_proofs": {
         "version": "1.0",
@@ -307,7 +341,8 @@ tool_catalog = {
         "usage": 'evaluate_demos_and_proofs["Demonstration videos and two provincial case studies are included."]',
         "examples": [
             'evaluate_demos_and_proofs["Outcome: reduced call handling time by 30% in pilot deployment."]'
-        ]
+        ],
+        "section": "Solution Fit"
     },
 
     # --- Meta / Utility ---
@@ -317,7 +352,8 @@ tool_catalog = {
         "usage": 'suggest_tool_for["evaluate scalability of product"]',
         "examples": [
             'suggest_tool_for["evaluate scalability of product"]'
-        ]
+        ],
+        "section": "General"
     },
     "tool_help": {
         "version": "1.0",
@@ -325,7 +361,8 @@ tool_catalog = {
         "usage": 'tool_help["check_assumptions_validity"]',
         "examples": [
             'tool_help["check_assumptions_validity"]'
-        ]
+        ],
+        "section": "General"
     },
     "auto_fill_gaps_with_research": {
         "version": "1.0",
@@ -333,7 +370,8 @@ tool_catalog = {
         "usage": 'auto_fill_gaps_with_research["data privacy best practices"]',
         "examples": [
             'auto_fill_gaps_with_research["data privacy best practices"]'
-        ]
+        ],
+        "section": "General"
     },
     "check_guideline_dynamic": {
         "version": "1.0",
@@ -341,7 +379,8 @@ tool_catalog = {
         "usage": 'check_guideline_dynamic["FHIR security best practices"]',
         "examples": [
             'check_guideline_dynamic["FHIR security best practices"]'
-        ]
+        ],
+        "section": "General"
     },
     "detect_boilerplate_or_marketing_fluff": {
         "description": "Identifies vague or overly promotional content in a proposal section.",
@@ -349,7 +388,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'detect_boilerplate_or_marketing_fluff["We deliver world-class value with seamless integration."]'
-        ]
+        ],
+        "section": "General"
     },
     "evaluate_writing_clarity": {
         "description": "Provides feedback on the clarity, conciseness, and readability of the proposal section.",
@@ -357,7 +397,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'evaluate_writing_clarity["Our unique approach leverages synergies across the ecosystem."]'
-        ]
+        ],
+        "section": "General"
     },
     "check_fact_substantiation": {
         "description": "Assesses whether proposal claims are backed by evidence or examples.",
@@ -365,7 +406,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'check_fact_substantiation["We have extensive experience in the healthcare sector."]'
-        ]
+        ],
+        "section": "General"
     },
     "check_for_unsupported_assumptions": {
         "description": "Finds assumptions in the proposal and flags those that may be unrealistic or risky.",
@@ -373,7 +415,8 @@ tool_catalog = {
         "version": "1.0",
         "examples": [
             'check_for_unsupported_assumptions["Client will provide integration team and data migration tools."]'
-        ]
+        ],
+        "section": "General"
     }
 }
 

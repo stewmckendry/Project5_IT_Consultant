@@ -2,7 +2,9 @@
 
 from src.models.openai_interface import call_openai_with_tracking
 import uuid
-from src.utils.logging_utils import log_phase, log_thought_score, log_result, print_tool_stats
+from src.utils.logging_utils import log_phase, log_thought_score, log_deduplication
+from src.utils.thought_filtering import filter_redundant_thoughts
+import re
 
 # --- Tree Node Class ---
 class TreeNode:
@@ -106,15 +108,26 @@ class SimpleToTAgent:
             t.strip("123. ").strip("-• ") for t in response.split("\n") if t.strip()
         ]  # strips #s, -, and parses thoughs by line break
         return thoughts[:3]
+    
+    def evaluate_and_select(self, children, criterion, section):
+        if not children:
+            return []
 
-    def evaluate_and_select(self, nodes):
-        for node in nodes:
-            node.score = self.scorer(node.thought)
-        return sorted(nodes, key=lambda n: n.score, reverse=True)[: self.beam_width]
+        thoughts = [child.thought for child in children]
+        scores = score_thoughts_with_openai_batch(thoughts, criterion, section)
 
-    def run(self, section, criterion):
+        for child, score in zip(children, scores):
+            child.score = score
+
+        children.sort(key=lambda c: c.score, reverse=True)
+        return children[: self.beam_width]
+
+
+    def run(self, section, criterion, seen_thoughts=None, seen_embeddings=None):
         root = TreeNode("ROOT")
         frontier = [root]
+        seen_thoughts = seen_thoughts or []
+        seen_embeddings = seen_embeddings or []
 
         for depth in range(self.max_depth):
             log_phase(
@@ -130,9 +143,16 @@ class SimpleToTAgent:
                 if not thoughts:
                     log_phase("⚠️ No thoughts returned. Skipping.")
                     continue
+                
+                # Filter out redundant thoughts
+                novel_thoughts, novel_embs = filter_redundant_thoughts(thoughts, seen_thoughts, seen_embeddings)
+                log_deduplication(thoughts, novel_thoughts) # keep track of thought deduplication stats
+                seen_thoughts.extend(novel_thoughts) # Store non-redundant thoughts (for future new thought checks)
+                seen_embeddings.extend(novel_embs) # Store non-redundant embeddings (for future new thought checks)
+                log_phase(f"🧠 Filtering redundant thoughts. Novel thoughts: {novel_thoughts}")
 
-                child_nodes = [TreeNode(thought=t, parent=node) for t in thoughts]
-                top_children = self.evaluate_and_select(child_nodes)
+                child_nodes = [TreeNode(thought=t, parent=node) for t in novel_thoughts]
+                top_children = self.evaluate_and_select(child_nodes, criterion, section)
 
                 for child in top_children:
                     log_phase(f"✅ Selected: {child.thought} (score: {child.score})")
@@ -228,3 +248,38 @@ def score_thought_with_openai(thought, criterion, section, model="gpt-3.5-turbo"
         log_phase("⚠️ Failed to parse score, using fallback score = 5")
         log_thought_score(thought, 5)
         return 5
+    
+def score_thoughts_with_openai_batch(thoughts, criterion, section_text, model="gpt-3.5-turbo"):
+    """
+    Scores a batch of thoughts using a single OpenAI call. Returns a list of scores (0–10).
+    """
+    prompt = f"""You are scoring reasoning questions to evaluate a proposal.
+
+Criterion: {criterion}
+
+Proposal Excerpt:
+{section_text}
+
+Rate each of the following thoughts from 0 to 10 based on how helpful they are in evaluating the proposal for this criterion.  Use this rubric to assign a score from 1 to 10:
+
+    - 9–10: Insightful, highly relevant, and clearly advances evaluation.
+    - 7–8: Solid, useful thought, but not exceptionally insightful.
+    - 4–6: Somewhat helpful, but vague or redundant.
+    - 1–3: Not useful, unclear, or irrelevant.
+
+Thoughts:
+""" + "\n".join([f"{i+1}. {t}" for i, t in enumerate(thoughts)]) + "\n\nReturn a list of scores, one per thought, in the same order."
+
+    messages = [{"role": "user", "content": prompt}]
+    response = call_openai_with_tracking(messages, model=model)
+
+    try:
+        # Example response: "8, 7, 9"
+        scores = [int(s.strip()) for s in re.findall(r'\d+', response)]
+        if len(scores) != len(thoughts):
+            raise ValueError("Mismatch in number of thoughts and scores.")
+        return scores
+    except Exception as e:
+        log_phase(f"⚠️ Failed to parse batch scores: {e} | response: {response}")
+        # Fallback: score individually if needed
+        return [score_thought_with_openai(t, criterion, section_text) for t in thoughts]

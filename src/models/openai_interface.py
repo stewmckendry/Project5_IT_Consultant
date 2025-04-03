@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from openai import OpenAI, OpenAIError
 from src.utils.logging_utils import log_phase, log_openai_call, log_openai_call_time
 import time
+import inspect
 
 # Load the .env file
 load_dotenv()
@@ -20,7 +21,7 @@ if not my_openai_api_key:
 client = OpenAI(api_key=my_openai_api_key)
 
 
-def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, max_tokens=500):
+def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, max_tokens=500, source=None):
     """
     Calls OpenAI's ChatCompletion API with structured messages and tracks token usage and estimated cost.
 
@@ -29,6 +30,7 @@ def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, 
     model (str): The model to use for the API call. Default is "gpt-3.5-turbo".
     temperature (float): The sampling temperature to use. Higher values mean the model will take more risks. Default is 0.7.
     max_tokens (int): The maximum number of tokens to generate in the completion. Default is 500.
+    source (str): The source of the function call. Default is None.
 
     Workflow:
     1. The function takes the input parameters and calls the OpenAI ChatCompletion API.
@@ -68,8 +70,18 @@ def call_openai_with_tracking(messages, model="gpt-3.5-turbo", temperature=0.7, 
     total_tokens_used += total
     estimated_cost_usd += (total / 1000) * COST_PER_1K_TOKENS
 
+    # Find source of which function called call_openai_with_tracking()
+    if source is None:
+        for frame in inspect.stack()[1:]:
+            module = inspect.getmodule(frame.frame)
+            if module and not module.__name__.startswith("utils.logging_utils"):
+                source = frame.function
+                break
+        else:
+            source = "unknown"
+
     # Logging
-    log_openai_call(messages, response, prompt_tokens=prompt_tokens,
+    log_openai_call(messages, response, source=source, prompt_tokens=prompt_tokens,
                     completion_tokens=completion_tokens, embedding=False)
     log_openai_call_time(duration)
 

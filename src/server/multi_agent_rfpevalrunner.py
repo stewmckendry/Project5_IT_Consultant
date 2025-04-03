@@ -5,7 +5,8 @@ from src.server.proposal_eval import evaluate_proposal
 from src.utils.export_utils import export_proposal_report, save_markdown_and_pdf
 from src.server.final_eval_summary import generate_final_comparison_summary
 from src.utils.file_loader import load_report_text_from_file, parse_rfp_from_file
-from src.utils.logging_utils import log_phase, log_result, print_tool_stats, print_openai_call_stats, print_thought_stats
+from src.utils.logging_utils import log_phase, log_result, reset_dedup_stats
+from src.utils.logging_reports import finalize_evaluation_run
 
 def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = None, rfp_criteria: List[str] = None, model="gpt-3.5-turbo") -> tuple:
     """
@@ -39,13 +40,21 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = Non
     outputs_dir = project_root / "outputs" / "proposal_eval_reports"
     outputs_dir.mkdir(parents=True, exist_ok=True)
 
+    # Initialize containers + logs
     all_vendor_evaluations = []
+    reset_dedup_stats()
+    log_phase("🧹 Resetting thought deduplication stats")
 
     for vendor_name, proposal_text in proposals.items():
         log_phase(f"\n🚀 Evaluating {vendor_name}...")
 
+        # ✅ Fresh set per proposal 
+        executed_tools_global = set()
+
         # Step 1: Evaluate proposal
-        results, overall_score, swot_summary = evaluate_proposal(proposal_text, rfp_criteria, model=model)
+        results, overall_score, swot_summary = evaluate_proposal(
+            proposal_text, rfp_criteria, model=model,
+            executed_tools_global=executed_tools_global)
         log_phase(f"✅ {vendor_name} evaluation complete.")
         log_result(vendor_name, "Overall Score", overall_score)
         log_phase(f"{vendor_name}, Results: {results}") # Print results
@@ -78,10 +87,16 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = Non
     )
     log_phase("✅ Final summary report saved.")
 
-    # Step 6: Print tool usage statistics
-    print_tool_stats()
-    print_openai_call_stats()
-    print_thought_stats()
+    # Step 6: Run evaluation of the proposal evaluation (for logging analytics)
+
+    # ✅ Add results to log summary
+    log_phase("📋 Writing log summary and analysis report...")
+    # Extract results for all vendors
+    all_results = []
+    for vendor_eval in all_vendor_evaluations:
+        all_results.extend(vendor_eval["results"])
+    log_report_meta = finalize_evaluation_run(results=all_results)
+    log_phase("✅ Log summary and analysis report written.")
     log_phase("✅ Multi-proposal evaluation completed.")
 
-    return all_vendor_evaluations, final_summary_text
+    return all_vendor_evaluations, final_summary_text, log_report_meta

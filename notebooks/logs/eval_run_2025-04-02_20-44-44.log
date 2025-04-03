@@ -1,0 +1,84 @@
+[20:44:44] [INFO] 📌 Logging initialized
+[20:44:44] [INFO] 📌 Log file: logs/eval_run_2025-04-02_20-44-44.log
+[20:44:44] [INFO] 📌 ✅ Loaded cached tool embeddings.
+[20:44:44] [INFO] 📌 📁 Loading scenario: scenario1_basic
+[20:44:44] [INFO] 📌 📁 Loading scenario data from /Users/liammckendry/Project5_IT_Consultant/data/rfp_scenarios/scenario1_basic (RFP: /Users/liammckendry/Project5_IT_Consultant/data/rfp_scenarios/scenario1_basic/rfp.txt)
+[20:44:44] [INFO] 📌 📄 Found 3 files
+[20:44:44] [INFO] 📌 📄 Loading proposal from rfp.txt
+[20:44:44] [INFO] 📌 📄 Loading proposal from vendor_b.txt
+[20:44:44] [INFO] 📌 📄 Loaded proposal for Vendor B
+[20:44:44] [INFO] 📌 📄 Loading proposal from vendor_a.txt
+[20:44:44] [INFO] 📌 📄 Loaded proposal for Vendor A
+[20:44:44] [INFO] 📌 ✅ Loaded 2 proposals and RFP from /Users/liammckendry/Project5_IT_Consultant/data/rfp_scenarios/scenario1_basic/rfp.txt
+[20:44:44] [INFO] 📌 📄 Loading RFP from /Users/liammckendry/Project5_IT_Consultant/data/rfp_scenarios/scenario1_basic/rfp.txt...
+[20:44:44] [INFO] 📌 ✅ RFP loaded. Extracted full_text: Evaluation Criteria:
+1. Solution Fit
+2. Cost
+
+[20:44:44] [INFO] 📌 ✅ Extracted RFP sections: {'Evaluation Criteria': 'Evaluation Criteria:\n1. Solution Fit\n2. Cost\n'}
+[20:44:44] [INFO] 📌 ✅ Extracted RFP criteria: [{'name': 'Solution Fit', 'weight': None, 'description': ''}, {'name': 'Cost', 'weight': None, 'description': ''}]
+[20:44:44] [INFO] 📌 🧹 Resetting thought deduplication stats
+[20:44:44] [INFO] 📌 
+🚀 Evaluating Vendor B...
+[20:44:44] [INFO] 📌 🔍 Matching proposal sections to RFP criteria...
+[20:44:44] [INFO] 📌 🔍 Found 0 relevant paragraphs for criterion 'Solution Fit'
+[20:44:44] [INFO] 📌 🔍 No paragraphs above threshold for 'Solution Fit'. Selecting top match.
+[20:44:45] [INFO] 📌 🔍 Found 0 relevant paragraphs for criterion 'Cost'
+[20:44:45] [INFO] 📌 🔍 No paragraphs above threshold for 'Cost'. Selecting top match.
+[20:44:45] [INFO] 📌 ✅ Proposal preprocessed = parse content by criteria.
+[20:44:45] [INFO] 📌 
+📌 Evaluating criterion: Solution Fit
+[20:44:45] [INFO] 📌 
+🔁 Expanding depth 1/2 — Frontier size: 1
+[20:44:46] [INFO] 🔄 OpenAI call #1 from generate_thoughts_openai: [{'role': 'system', 'content': 'You are an expert evaluator of RFP proposals.'}, {'role': 'user', 'content': '\n    You are evaluating a technology vendor proposal for the criterion: **Solution Fit**.\n\n    Proposal excerpt:\n    """\n    We provide an intuitive, reliable system with 24/7 support. Our pricing is slightly higher due to premium features.\n    """\n\n    Current reasoning path: (start)\n\n    What are the next 3 useful thoughts or questions that could help you assess the proposal based on this criterion?\n    Respond with a numbered list.\n    '}]... -> ChatCompletion(id='chatcmpl-BI2zFk490Xpt4Wcs8p0Meu... (Prompt tokens: 111, Completion tokens: 82)
+[20:44:46] [INFO] 📌 💡 Thoughts generated from: 'ROOT'
+[20:44:46] [INFO] 📌   → How well does the proposed system align with the specific needs and requirements outlined in the RFP?
+  → What are the key features and functionalities offered by the vendor, and how do they address the challenges or goals identified in the RFP?
+  → Are the premium features highlighted by the vendor essential for meeting the organization's objectives, or are they unnecessary add-ons that may not provide significant value?
+[20:44:46] [INFO] 🔄 OpenAI call #2 from <listcomp>: Embedding call, no response logged and no token usage stats. 
+[20:44:47] [INFO] 🔄 OpenAI call #3 from <listcomp>: Embedding call, no response logged and no token usage stats. 
+[20:44:47] [INFO] 🔄 OpenAI call #4 from <listcomp>: Embedding call, no response logged and no token usage stats. 
+[20:44:47] [INFO] 📌 🧠 Filtering redundant thoughts. Novel thoughts: ['How well does the proposed system align with the specific needs and requirements outlined in the RFP?', 'What are the key features and functionalities offered by the vendor, and how do they address the challenges or goals identified in the RFP?', "Are the premium features highlighted by the vendor essential for meeting the organization's objectives, or are they unnecessary add-ons that may not provide significant value?"]
+[20:44:48] [INFO] 🔄 OpenAI call #5 from score_thoughts_with_openai_batch: [{'role': 'user', 'content': "You are scoring reasoning questions to evaluate a proposal.\n\nCriterion: Solution Fit\n\nProposal Excerpt:\nWe provide an intuitive, reliable system with 24/7 support. Our pricing is slightly higher due to premium features.\n\nRate each of the following thoughts from 0 to 10 based on how helpful they are in evaluating the proposal for this criterion.  Use this rubric to assign a score from 1 to 10:\n\n    - 9–10: Insightful, highly relevant, and clearly advances evaluation.\n    - 7–8: Solid, useful thought, but not exceptionally insightful.\n    - 4–6: Somewhat helpful, but vague or redundant.\n    - 1–3: Not useful, unclear, or irrelevant.\n\nThoughts:\n1. How well does the proposed system align with the specific needs and requirements outlined in the RFP?\n2. What are the key features and functionalities offered by the vendor, and how do they address the challenges or goals identified in the RFP?\n3. Are the premium features highlighted by the vendor essential for meeting the organization's objectives, or are they unnecessary add-ons that may not provide significant value?\n\nReturn a list of scores, one per thought, in the same order."}]... -> ChatCompletion(id='chatcmpl-BI2zIgdCer9j2J7sexiROV... (Prompt tokens: 257, Completion tokens: 15)
+[20:44:48] [INFO] 📌 ⚠️ Failed to parse batch scores: Mismatch in number of thoughts and scores. | response: 1. 9
+2. 9
+3. 8
+[20:44:48] [INFO] 🔄 OpenAI call #6 from score_thought_with_openai: [{'role': 'user', 'content': '\n    You are evaluating a thought generated by an AI agent for assessing a technology proposal.\n\n    Use this rubric to assign a score from 1 to 10:\n\n    - 9–10: Insightful, highly relevant, and clearly advances evaluation.\n    - 7–8: Solid, useful thought, but not exceptionally insightful.\n    - 4–6: Somewhat helpful, but vague or redundant.\n    - 1–3: Not useful, unclear, or irrelevant.\n\n    Proposal:\n    """\n    We provide an intuitive, reliable system with 24/7 support. Our pricing is slightly higher due to premium features.\n    """\n\n    Criterion: Solution Fit\n    Thought: "How well does the proposed system align with the specific needs and requirements outlined in the RFP?"\n\n    Respond with a single number only, from 1 to 10.\n    '}]... -> ChatCompletion(id='chatcmpl-BI2zIXr1LSaz4LIVfKS8Eo... (Prompt tokens: 184, Completion tokens: 2)
+[20:44:48] [INFO] 📌 
+🧠 Scoring Thought:
+[20:44:48] [INFO] 📌 → How well does the proposed system align with the specific needs and requirements outlined in the RFP?
+[20:44:48] [INFO] 📌 📩 LLM Response: 8
+[20:44:48] [INFO] 📌 ✅ Parsed Score: 8/10
+[20:44:48] [DEBUG] 💭 Thought scored: How well does the proposed system align with the specific needs and requirements outlined in the RFP? with score 8
+[20:44:49] [INFO] 🔄 OpenAI call #7 from score_thought_with_openai: [{'role': 'user', 'content': '\n    You are evaluating a thought generated by an AI agent for assessing a technology proposal.\n\n    Use this rubric to assign a score from 1 to 10:\n\n    - 9–10: Insightful, highly relevant, and clearly advances evaluation.\n    - 7–8: Solid, useful thought, but not exceptionally insightful.\n    - 4–6: Somewhat helpful, but vague or redundant.\n    - 1–3: Not useful, unclear, or irrelevant.\n\n    Proposal:\n    """\n    We provide an intuitive, reliable system with 24/7 support. Our pricing is slightly higher due to premium features.\n    """\n\n    Criterion: Solution Fit\n    Thought: "What are the key features and functionalities offered by the vendor, and how do they address the challenges or goals identified in the RFP?"\n\n    Respond with a single number only, from 1 to 10.\n    '}]... -> ChatCompletion(id='chatcmpl-BI2zIEMlzTdPP8sHnKnd9n... (Prompt tokens: 192, Completion tokens: 2)
+[20:44:49] [INFO] 📌 
+🧠 Scoring Thought:
+[20:44:49] [INFO] 📌 → What are the key features and functionalities offered by the vendor, and how do they address the challenges or goals identified in the RFP?
+[20:44:49] [INFO] 📌 📩 LLM Response: 8
+[20:44:49] [INFO] 📌 ✅ Parsed Score: 8/10
+[20:44:49] [DEBUG] 💭 Thought scored: What are the key features and functionalities offered by the vendor, and how do they address the challenges or goals identified in the RFP? with score 8
+[20:44:49] [INFO] 🔄 OpenAI call #8 from score_thought_with_openai: [{'role': 'user', 'content': '\n    You are evaluating a thought generated by an AI agent for assessing a technology proposal.\n\n    Use this rubric to assign a score from 1 to 10:\n\n    - 9–10: Insightful, highly relevant, and clearly advances evaluation.\n    - 7–8: Solid, useful thought, but not exceptionally insightful.\n    - 4–6: Somewhat helpful, but vague or redundant.\n    - 1–3: Not useful, unclear, or irrelevant.\n\n    Proposal:\n    """\n    We provide an intuitive, reliable system with 24/7 support. Our pricing is slightly higher due to premium features.\n    """\n\n    Criterion: Solution Fit\n    Thought: "Are the premium features highlighted by the vendor essential for meeting the organization\'s objectives, or are they unnecessary add-ons that may not provide significant value?"\n\n    Respond with a single number only, from 1 to 10.\n    '}]... -> ChatCompletion(id='chatcmpl-BI2zJJhNk40f5q0E1gPNqe... (Prompt tokens: 194, Completion tokens: 2)
+[20:44:49] [INFO] 📌 
+🧠 Scoring Thought:
+[20:44:49] [INFO] 📌 → Are the premium features highlighted by the vendor essential for meeting the organization's objectives, or are they unnecessary add-ons that may not provide significant value?
+[20:44:49] [INFO] 📌 📩 LLM Response: 8
+[20:44:49] [INFO] 📌 ✅ Parsed Score: 8/10
+[20:44:49] [DEBUG] 💭 Thought scored: Are the premium features highlighted by the vendor essential for meeting the organization's objectives, or are they unnecessary add-ons that may not provide significant value? with score 8
+[20:44:49] [INFO] 📌 ✅ Selected: How well does the proposed system align with the specific needs and requirements outlined in the RFP? (score: 8)
+[20:44:49] [INFO] 📌 
+🔁 Expanding depth 2/2 — Frontier size: 1
+[20:44:50] [INFO] 🔄 OpenAI call #9 from generate_thoughts_openai: [{'role': 'system', 'content': 'You are an expert evaluator of RFP proposals.'}, {'role': 'user', 'content': '\n    You are evaluating a technology vendor proposal for the criterion: **Solution Fit**.\n\n    Proposal excerpt:\n    """\n    We provide an intuitive, reliable system with 24/7 support. Our pricing is slightly higher due to premium features.\n    """\n\n    Current reasoning path: How well does the proposed system align with the specific needs and requirements outlined in the RFP?\n\n    What are the next 3 useful thoughts or questions that could help you assess the proposal based on this criterion?\n    Respond with a numbered list.\n    '}]... -> ChatCompletion(id='chatcmpl-BI2zJ6RPNGPMTwo4YXLnWf... (Prompt tokens: 127, Completion tokens: 72)
+[20:44:50] [INFO] 📌 💡 Thoughts generated from: 'How well does the proposed system align with the specific needs and requirements outlined in the RFP?'
+[20:44:50] [INFO] 📌   → What are the specific needs and requirements outlined in the RFP related to technology solutions?
+  → How do the features and capabilities of the proposed system address these specific needs and requirements?
+  → Are the premium features offered by the vendor necessary to meet the outlined needs, or are they additional functionalities that may not align with the RFP requirements?
+[20:44:51] [INFO] 🔄 OpenAI call #10 from get_cached_embedding: Embedding call, no response logged and no token usage stats. 
+[20:44:51] [INFO] 📌 🧠 Embedding cache miss: What are the specific needs and requirements outlined in the RFP related to technology solutions?
+[20:44:51] [INFO] 🔄 OpenAI call #11 from get_cached_embedding: Embedding call, no response logged and no token usage stats. 
+[20:44:51] [INFO] 📌 🧠 Embedding cache miss: How do the features and capabilities of the proposed system address these specific needs and requirements?
+[20:44:52] [INFO] 🔄 OpenAI call #12 from get_cached_embedding: Embedding call, no response logged and no token usage stats. 
+[20:44:52] [INFO] 📌 🧠 Embedding cache miss: Are the premium features offered by the vendor necessary to meet the outlined needs, or are they additional functionalities that may not align with the RFP requirements?
+[20:44:52] [INFO] 📌 🧠 Filtering redundant thoughts. Novel thoughts: []
+[20:44:52] [INFO] 📌 ⚠️ No more frontier nodes. Stopping early.
+[20:44:52] [INFO] 📌 ✅ Loaded cached tool embeddings.
+[20:44:52] [INFO] 📌 Running ReAct loop for criterion 'Solution Fit' with tool embeddings.

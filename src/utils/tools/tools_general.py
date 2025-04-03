@@ -1,6 +1,7 @@
 from src.models.openai_interface import call_openai_with_tracking
 from src.utils.tools.tools_web import search_external_sources
 from src.server.prompt_builders import build_dual_context_prompt
+import re
 
 def detect_boilerplate_or_marketing_fluff(agent, input_arg) -> str:
     """
@@ -164,4 +165,11 @@ Please summarize this into a concise search query or fact-checking topic. Keep i
     except Exception as e:
         return f"An error occurred while processing the request: {str(e)}"
 
-    
+
+def extract_tool_name(action_str):
+    """
+    Extracts the tool name from a string like `tool_name["arg"]`.
+    Returns original string if no brackets found.
+    """
+    match = re.match(r"^([a-zA-Z0-9_]+)", action_str)
+    return match.group(1) if match else action_str

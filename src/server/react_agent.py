@@ -71,8 +71,18 @@ from src.utils.tools.tools_RFP_fit import (
 )
 
 from src.utils.tools.tool_dispatch import TOOL_FUNCTION_MAP
-from src.utils.logging_utils import log_phase, log_tool_used, log_tool_execution, log_tool_failed
+from src.utils.logging_utils import (
+    log_phase, 
+    log_tool_used, 
+    log_tool_execution, 
+    log_tool_failed,
+    log_deduplication
+)
 import time
+from src.utils.thought_filtering import filter_redundant_thoughts
+from src.utils.tools.tool_analysis import get_relevant_tools
+from src.utils.logging_utils import log_phase, log_tool_failed, log_tool_skipped
+from src.utils.tools.tools_general import summarize_to_query, extract_tool_name
 
 class ReActConsultantAgent:
     """
@@ -255,7 +265,7 @@ class ReActConsultantAgent:
 
 
 
-def run_react_loop_check_withTool(agent, max_steps=5, report_sections=None):
+def run_react_loop_check_withTool(agent, max_steps=5, report_sections=None, executed_tools_global=None):
     """
     Runs the ReAct (Reason + Act) loop for a specified number of steps.
 
@@ -281,6 +291,8 @@ def run_react_loop_check_withTool(agent, max_steps=5, report_sections=None):
     Returns:
     list: A list of dictionaries, where each dictionary contains the thought, action, and observation for each step.
     """
+    executed_tools_global = executed_tools_global or set()
+
     for step_num in range(max_steps):
         messages = agent.build_react_prompt_withTools()
         response = call_openai_with_tracking(messages, model=agent.model, temperature=agent.temperature)
@@ -298,7 +310,11 @@ def run_react_loop_check_withTool(agent, max_steps=5, report_sections=None):
             break
 
         # Generate observation based on action
-        observation = dispatch_tool_action(agent, action, report_sections=report_sections)
+        observation = dispatch_tool_action(
+            agent, 
+            action, 
+            report_sections=report_sections,
+            executed_tools_global=executed_tools_global)
 
         # Track tool history
         agent.memory["tool_history"].append((step_num, action, agent.section_name))
@@ -361,7 +377,13 @@ def run_single_react_step(agent, thought, action, step_num=0):
     return observation
 
 
-def dispatch_tool_action(agent, action, report_sections=None, tool_map=None, raise_errors=False):
+def dispatch_tool_action(
+        agent, 
+        action, 
+        report_sections=None, 
+        tool_map=None, 
+        raise_errors=False,
+        executed_tools_global=None):
     """
     Dispatches and executes the appropriate tool function based on the action string.
 
@@ -377,6 +399,7 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None, rai
     """
     log_phase(f"🛠️ Tool action: {action}")
     tool_map = tool_map or TOOL_FUNCTION_MAP
+    executed_tools_global = executed_tools_global or set()
 
     try:
         # Parse action string like tool_name["input string"]
@@ -387,6 +410,10 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None, rai
 
         tool_name = match.group(1)
         input_arg = match.group(3) if match.group(2) else None
+
+        if tool_name in executed_tools_global:
+            log_tool_skipped(tool_name, f"⚠️ Tool '{tool_name}' already executed for this proposal. Skipping duplicate call.")
+            return f"⚠️ Tool '{tool_name}' already executed for this proposal. Skipping duplicate call."
 
         if tool_name not in tool_map:
             log_tool_failed(tool_name, f"Tool '{tool_name}' not recognized.")
@@ -400,16 +427,20 @@ def dispatch_tool_action(agent, action, report_sections=None, tool_map=None, rai
         log_tool_used(tool_name)
         log_phase(f"🔍 Dispatching {tool_name} with args: {arg_spec}")
         log_tool_execution(tool_name, tool_fn, input_arg, agent)
+        
 
         # Call variants
         if arg_spec == ["agent"]:
-            return tool_fn(agent)
+            result = tool_fn(agent)
         elif arg_spec == ["input_arg"]:
-            return tool_fn(input_arg)
+            result = tool_fn(input_arg)
         elif arg_spec == ["agent", "input_arg"]:
-            return tool_fn(agent, input_arg)
+            result = tool_fn(agent, input_arg)
         else:
             raise ValueError(f"Unsupported arg spec for tool '{tool_name}': {arg_spec}")
+
+        executed_tools_global.add(tool_name)  # ✅ Mark as executed
+        return result
     except Exception as e:
         log_tool_failed(tool_name, f"{tool_name} dispatch failed: {e}")
         if raise_errors:
@@ -425,7 +456,18 @@ def select_best_tool_with_llm(agent, criterion, top_thoughts, model="gpt-3.5-tur
     return response.strip().splitlines()[0]  # Example: check_guideline["cloud"]
 
 
-def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_text, thoughts=None, tool_embeddings=None, report_sections=None, max_steps=4):
+def run_react_loop_for_rfp_eval(
+        agent, 
+        criterion, 
+        section_text, 
+        full_proposal_text, 
+        thoughts=None, 
+        tool_embeddings=None, 
+        report_sections=None, 
+        max_steps=4,
+        seen_thoughts=None,
+        seen_embeddings=None,
+        executed_tools_global=None):
     """
     Runs a ReAct loop for RFP evaluation using the new embedding-based prompt builder.
 
@@ -440,6 +482,10 @@ def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_te
     Returns:
         list of step dictionaries with thought, action, observation.
     """
+    seen_thoughts = seen_thoughts or []
+    seen_embeddings = seen_embeddings or []
+    executed_tools_global = executed_tools_global or set()
+
     for step_num in range(max_steps):
         log_phase(f"\n🔁 React Step {step_num + 1} of {max_steps}")
         messages = agent.build_react_prompt_forRFPeval(
@@ -468,9 +514,25 @@ def run_react_loop_for_rfp_eval(agent, criterion, section_text, full_proposal_te
             log_phase(f"⚠️ Failed to parse step {step_num + 1}: {str(e)}")
             break
         
+        # Check if action is not redundant to previous thoughts
+        novel_thoughts, novel_embs = filter_redundant_thoughts([thought], seen_thoughts, seen_embeddings)
+        log_deduplication([thought], novel_thoughts)
+        if not novel_thoughts:
+            log_phase(f"⚠️ Skipping redundant thought: {thought}")
+            continue
+
+        seen_thoughts.extend(novel_thoughts) # Store non-redundant thoughts (for future new thought checks)
+        seen_embeddings.extend(novel_embs) # Store non-redundant embeddings (for future new thought checks)
+        thought = novel_thoughts[0]  # Use cleaned one
+
         # Run tool
         try:
-            observation = dispatch_tool_action(agent, action, report_sections=report_sections, raise_errors=True)
+            observation = dispatch_tool_action(
+                agent, 
+                action, 
+                report_sections=report_sections, 
+                executed_tools_global=executed_tools_global,
+                raise_errors=True)
             log_phase(f"👀 Observation: {observation}")
             if observation is None:
                 observation = "⚠️ Tool returned no result."
@@ -522,3 +584,94 @@ def parse_thought_action(response: str):
         raise ValueError(f"Could not parse Thought or Action from response:\n{response}")
 
     return thought, action
+
+
+def run_missing_relevant_tools(
+    agent,
+    criterion,
+    section_text,
+    relevant_tools,
+    tool_embeddings,
+    triggered_tools,
+    tool_function_map,
+    executed_tools_global=None,
+    similarity_threshold=0.75,
+    run_score_threshold=0.75,
+    verbose=False
+):
+    """
+    Identifies and runs relevant tools based on embedding similarity that were not already triggered.
+
+    Parameters:
+        agent: ReActConsultantAgent (provides section context)
+        criterion: str
+        section_text: str
+        tool_embeddings: Dict[str, List[float]]
+        triggered_tools: list of already used tools [{tool, result, thought}]
+        tool_function_map: dict of {tool_name: function}
+        similarity_threshold: float (default 0.75)
+
+    Returns:
+        - auto_triggered: list of dicts with tool execution results
+        - missing_tools: list of (tool_name, score) pairs
+    """
+    if executed_tools_global is None:
+        executed_tools_global = set()
+
+    tools_used = [extract_tool_name(t["tool"]) for t in triggered_tools]
+
+    auto_triggered = []
+    auto_triggered_meta = []
+
+    log_phase("In run_missing_relevant_tools()")
+    log_phase(f"tools_used: {tools_used}")
+    log_phase(f"relevant_tools: {relevant_tools}")
+    for tool_name, score in relevant_tools:
+        log_phase(f"Tool: {tool_name}, Score: {score:.3f}")
+        log_phase(f"run_score_threshold: {run_score_threshold:.3f}, ")
+        if score < run_score_threshold:
+            continue
+        if tool_name in tools_used:
+            continue
+        if tool_name in executed_tools_global:
+            continue
+        if tool_name not in tool_function_map:
+            continue
+
+        try:
+            tool_fn = tool_function_map[tool_name] # resolve function name in tool_function_map
+
+            log_phase(f"⚙️ Auto-running missing relevant tool: {tool_name} (score: {score})")
+            query = "evaluate based on section context"
+            action_str = f'{tool_name}["{query}"]'
+            log_phase(f"Calling {tool_name} with query: {query}")
+            result = dispatch_tool_action(
+                agent=agent,
+                action=action_str,
+                report_sections=None,
+                tool_map=tool_function_map,
+                raise_errors=False,
+                executed_tools_global=executed_tools_global
+            )
+
+            auto_triggered.append({  # store meta data
+                "tool": tool_name,
+                "result": result,
+                "thought": f"Auto-invoked based on similarity score {score:.3f}"
+            })
+
+            auto_triggered_meta.append({  # store meta data
+                "tool": tool_name,
+                "criterion": criterion,
+                "similarity_score": score,
+                "result": result
+            })
+
+            executed_tools_global.add(tool_name) # add tool to global executed tools
+            log_phase(f"Tool {tool_name} executed successfully.")
+        except Exception as e:
+            log_tool_failed(tool_name, f"Auto tool call failed: {e}")
+            continue
+
+    return auto_triggered, auto_triggered_meta
+

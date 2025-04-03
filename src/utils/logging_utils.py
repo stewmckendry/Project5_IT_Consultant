@@ -16,6 +16,8 @@ logger.addHandler(ch)
 tool_stats = defaultdict(int)
 tool_failure_stats = defaultdict(int)    # failed calls
 tool_failure = {}
+tool_skipped_stats = defaultdict(int)    # failed calls
+tool_skipped = {}
 thought_stats = defaultdict(int)
 thought_score_stats = defaultdict(int)
 openai_call_log = []
@@ -25,7 +27,12 @@ openai_call_sources = defaultdict(int)
 openai_prompt_token_usage_by_source = defaultdict(int)
 openai_completion_token_usage_by_source = defaultdict(int)
 #tool_call_times = defaultdict(list)
-
+thought_dedup_stats = {
+    "total_generated": 0,
+    "unique_retained": 0,
+    "redundant_filtered": 0,
+    "filtered_examples": []
+}
 
 
 def log_phase(message):
@@ -36,7 +43,7 @@ def log_result(vendor, criterion, score):
 
 def log_tool_used(tool_name):
     tool_stats[tool_name] += 1
-    logger.debug(f"⚙️ Tool used: {tool_name}")
+    logger.debug(f"⚙️ Tool used: {tool_name}, total calls: {tool_stats[tool_name]}")
 
 def log_thought_score(thought, score):
     thought_stats[thought] += 1
@@ -46,16 +53,6 @@ def log_thought_score(thought, score):
 def log_openai_call(prompt, response, source=None, prompt_tokens=0, completion_tokens=0, embedding=True):
     global openai_call_counter
     openai_call_counter += 1
-
-    if not source:
-        # Automatically walk the stack to find the first external caller
-        for frame in inspect.stack()[1:]:
-            module = inspect.getmodule(frame.frame)
-            if module and not module.__name__.startswith("logging_utils"):
-                source = frame.function
-                break
-        else:
-            source = "unknown"
 
     openai_call_sources[source] += 1
     openai_prompt_token_usage_by_source[source] += prompt_tokens
@@ -118,6 +115,11 @@ def log_tool_failed(tool_name, error_message):
     tool_failure_stats[tool_name] += 1
     logger.error(f"❌ Tool '{tool_name}' failed: {error_message}")
 
+def log_tool_skipped(tool_name, error_message):
+    tool_skipped[tool_name] = error_message
+    tool_skipped_stats[tool_name] += 1
+    logger.error(f"❌ Tool '{tool_name}' skipped: {error_message}")
+
 def log_openai_call_time(duration_sec):
     openai_call_times.append(duration_sec)
 
@@ -132,6 +134,9 @@ def print_openai_call_stats():
     logger.info(f"🔄 Total OpenAI calls: {total}, Avg time: {round(avg, 2)} sec")
 
 def setup_logging(log_file="logs/eval.log"):
+    global current_log_file
+    current_log_file = log_file
+
     logger = logging.getLogger("ProposalEvaluator")
     logger.setLevel(logging.DEBUG)
 
@@ -210,3 +215,38 @@ def calculate_token_usage_summary(model="gpt-3.5-turbo"):
         "total_tokens": total_tokens,
         "estimated_cost_usd": round(total_cost, 4)
     }
+
+
+def get_log_issues(log_file_path=None, levels=("ERROR", "WARNING", "CRITICAL"), max_lines=10):
+    """
+    Reads the log file and returns a list of relevant lines based on log levels.
+    """
+    log_path = Path(log_file_path or current_log_file or "logs/eval.log")
+
+    if not log_path.exists():
+        return []
+
+    matched = []
+    for line in log_path.read_text().splitlines():
+        if any(f"[{level.upper()}]" in line.upper() for level in levels):
+            matched.append(line.strip())
+        if len(matched) >= max_lines:
+            break
+
+    return matched
+
+
+def log_deduplication(thoughts, unique_thoughts):
+    deduped = [t for t in thoughts if t not in unique_thoughts]
+    thought_dedup_stats["total_generated"] += len(thoughts)
+    thought_dedup_stats["unique_retained"] += len(unique_thoughts)
+    thought_dedup_stats["redundant_filtered"] += len(deduped)
+    thought_dedup_stats["filtered_examples"].extend(deduped[:3])  # limit to 3 for brevity
+
+def reset_dedup_stats():
+    thought_dedup_stats.update({
+        "total_generated": 0,
+        "unique_retained": 0,
+        "redundant_filtered": 0,
+        "filtered_examples": []
+    })
