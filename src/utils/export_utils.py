@@ -410,9 +410,9 @@ def convert_markdown_to_pdf(md_path):
     return pdf_path
 
 
-def export_proposal_report(vendor_name, results, overall_score, swot_summary, output_dir: Path):
+def export_proposal_report(vendor_name, results, overall_score, swot_summary, output_dir: Path) -> dict:
     """
-    Generates Markdown, HTML (emoji-safe), and PDF (font-safe) versions of a vendor proposal evaluation report.
+    Generates and returns paths for Markdown, HTML, and PDF of the proposal report.
     """
     # 1. Export Markdown
     markdown_path = export_proposal_report_to_markdown(
@@ -423,51 +423,51 @@ def export_proposal_report(vendor_name, results, overall_score, swot_summary, ou
         output_dir=output_dir
     )
 
-    # 2. Convert to HTML and PDF from the same Markdown source
-    convert_markdown_to_html_and_pdf_rfp(markdown_path)
+    # 2. Convert to HTML and PDF
+    html_path, pdf_path = convert_markdown_to_html_and_pdf_rfp(markdown_path)
+
+    return {
+        "vendor_name": vendor_name,
+        "markdown": markdown_path,
+        "html": html_path,
+        "pdf": pdf_path
+    }
 
 
-def save_markdown_and_pdf(markdown_text, additional_md, filename, output_dir="outputs"):
+def save_markdown_and_pdf(markdown_text, additional_md, filename, output_dir="outputs") -> dict:
     """
-    Save markdown to .md and generate HTML and PDF with appropriate styling.
-
-    Parameters:
-        markdown_text (str): Main markdown content.
-        additional_md (str): Preceding markdown content (e.g., score table).
-        filename (str): Output file prefix (no extension).
-        output_dir (str): Folder to save outputs (relative to project root).
+    Saves the final summary as markdown, HTML, and PDF, and returns file paths.
     """
-    # Resolve and create output directory
     root_dir = Path(__file__).resolve().parents[2]
     output_dir = root_dir / "outputs" / "proposal_eval_reports"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Compose full report: table first, then content
     full_report = ""
     if additional_md:
         full_report += "## 📊 Score Comparison\n\n" + additional_md.strip() + "\n\n---\n\n"
     full_report += markdown_text.strip()
 
-    # === 1. Save as Markdown ===
     md_path = output_dir / f"{filename}.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(full_report)
 
-    # === 2. Convert to HTML and PDF ===
     html_body = markdown(full_report, output_format="html5")
 
-    # HTML: emoji-friendly
     html_path = output_dir / f"{filename}.html"
     styled_html = inject_html_style(html_body, for_pdf=False)
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(styled_html)
 
-    # PDF: font-safe version
     pdf_path = output_dir / f"{filename}.pdf"
-    styled_html_pdf = inject_html_style(html_body, for_pdf=True)
-    HTML(string=styled_html_pdf).write_pdf(pdf_path)
+    styled_pdf_html = inject_html_style(html_body, for_pdf=True)
+    HTML(string=styled_pdf_html).write_pdf(pdf_path)
 
-    print(f"✅ Saved: {md_path}, {html_path}, {pdf_path}")
+    return {
+        "markdown": md_path,
+        "html": html_path,
+        "pdf": pdf_path
+    }
+
 
 def convert_markdown_to_html_and_pdf_rfp(md_path):
     """

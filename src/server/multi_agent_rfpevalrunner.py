@@ -1,72 +1,53 @@
 from pathlib import Path
-import pandas as pd
-from typing import Dict, List
 from src.server.proposal_eval import evaluate_proposal
 from src.utils.export_utils import export_proposal_report, save_markdown_and_pdf
 from src.server.final_eval_summary import generate_final_comparison_summary
-from src.utils.file_loader import load_report_text_from_file, parse_rfp_from_file
+from src.utils.file_loader import parse_rfp_from_file
 from src.utils.logging_utils import log_phase, log_result, reset_dedup_stats
 from src.utils.logging_reports import finalize_evaluation_run
 
-def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = None, rfp_criteria: List[str] = None, model="gpt-3.5-turbo") -> tuple:
+def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = None, rfp_criteria: List[str] = None, model="gpt-3.5-turbo") -> dict:
     """
-    Runs multi-agent evaluation for multiple proposals against common RFP criteria.
-    
-    Parameters:
-        proposals (dict): Dictionary of vendor_name: proposal_text
-        rfp_criteria (list): List of evaluation criteria
-        model (str): LLM model name to use
-
+    Run evaluations for multiple vendor proposals against RFP criteria.
+    Args:
+        proposals (Dict[str, str]): Dictionary of vendor names and their proposal texts.
+        rfp_file (str): Path to the RFP file.
+        rfp_criteria (List[str]): List of RFP criteria.
+        model (str): Model name for evaluation.
     Returns:
-        results_dict: {vendor_name: full evaluation output}
-        summary_markdown: markdown comparison summary
-        score_table: DataFrame with scores per criterion per vendor
+        dict: Dictionary containing evaluations, final summary text, and file paths.
     """
-    # Step 1: Extract criteria if needed
+    # Load RFP criteria from file if provided
     if rfp_file:
         log_phase(f"📄 Loading RFP from {rfp_file}...")
         rfp_parsed = parse_rfp_from_file(rfp_file)
-        rfp_text = rfp_parsed["full_text"]
         rfp_criteria = rfp_parsed["criteria"]
-        rfp_sections = rfp_parsed["sections"] # for future use
-        log_phase(f"✅ RFP loaded. Extracted full_text: {rfp_text}")
-        log_phase(f"✅ Extracted RFP sections: {rfp_sections}")
         log_phase(f"✅ Extracted RFP criteria: {rfp_criteria}")
-    assert rfp_criteria is not None and len(rfp_criteria) > 0, "No RFP criteria provided or extracted."
+        rfp_info = {
+            "criteria": rfp_criteria,
+            "path": rfp_file,
+        }
+    assert rfp_criteria, "No RFP criteria provided or extracted."
 
-
-    # Define output directory
+    # Prepare output folders
     project_root = Path.cwd().parent
     outputs_dir = project_root / "outputs" / "proposal_eval_reports"
     outputs_dir.mkdir(parents=True, exist_ok=True)
 
-    # Initialize containers + logs
     all_vendor_evaluations = []
+    proposal_reports = {}
     reset_dedup_stats()
-    log_phase("🧹 Resetting thought deduplication stats")
 
-    for vendor_name, proposal_text in proposals.items():
+    for vendor_name, proposal_text in sorted(proposals.items()):
         log_phase(f"\n🚀 Evaluating {vendor_name}...")
-
-        # ✅ Fresh set per proposal 
         executed_tools_global = set()
-
-        # Step 1: Evaluate proposal
         results, overall_score, swot_summary = evaluate_proposal(
-            proposal_text, rfp_criteria, model=model,
-            executed_tools_global=executed_tools_global)
-        log_phase(f"✅ {vendor_name} evaluation complete.")
-        log_result(vendor_name, "Overall Score", overall_score)
-        log_phase(f"{vendor_name}, Results: {results}") # Print results
-        score_dict = {r["criterion"]: r["proposal_score"] for r in results}
-        for criterion, proposal_score in score_dict.items():
-            log_result(vendor_name, criterion, proposal_score)
-
-        # Step 2: Save full proposal report (Markdown + HTML + PDF)
-        export_proposal_report(vendor_name, results, overall_score, swot_summary, output_dir=outputs_dir)
-        log_phase(f"✅ {vendor_name} evaluation report saved in {outputs_dir}.")
-
-        # Step 3: Add to combined results
+            proposal_text, rfp_criteria, model=model, executed_tools_global=executed_tools_global
+        )
+        file_paths = export_proposal_report(
+            vendor_name, results, overall_score, swot_summary, output_dir=outputs_dir
+        )
+        proposal_reports[vendor_name] = file_paths
         all_vendor_evaluations.append({
             "vendor_name": vendor_name,
             "results": results,
@@ -74,29 +55,25 @@ def run_multi_proposal_evaluation(proposals: Dict[str, str], rfp_file: str = Non
             "swot_summary": swot_summary
         })
 
-    # Step 4: Generate final LLM summary
     final_summary_text, score_table_md = generate_final_comparison_summary(all_vendor_evaluations, model=model)
-    log_phase("✅ Final summary generated.")
-
-    # Step 5: Save final summary
-    save_markdown_and_pdf(
+    final_summary_paths = save_markdown_and_pdf(
         markdown_text=final_summary_text,
         additional_md=score_table_md,
         filename="final_summary_report",
-        output_dir="outputs/proposal_eval_reports"
+        output_dir=outputs_dir
     )
-    log_phase("✅ Final summary report saved.")
 
-    # Step 6: Run evaluation of the proposal evaluation (for logging analytics)
-
-    # ✅ Add results to log summary
-    log_phase("📋 Writing log summary and analysis report...")
-    # Extract results for all vendors
-    all_results = []
-    for vendor_eval in all_vendor_evaluations:
-        all_results.extend(vendor_eval["results"])
+    # Log analytics report
+    all_results = [r for vendor in all_vendor_evaluations for r in vendor["results"]]
     log_report_meta = finalize_evaluation_run(results=all_results)
-    log_phase("✅ Log summary and analysis report written.")
-    log_phase("✅ Multi-proposal evaluation completed.")
 
-    return all_vendor_evaluations, final_summary_text, log_report_meta
+    return {
+        "rfp_info": rfp_info,
+        "evaluations": all_vendor_evaluations,
+        "final_summary_text": final_summary_text,
+        "file_paths": {
+            "proposal_reports": proposal_reports,
+            "final_summary": final_summary_paths,
+            "log_summary": log_report_meta["paths"]
+        }
+    }
