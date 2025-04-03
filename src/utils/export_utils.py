@@ -5,10 +5,12 @@ from src.models.openai_interface import call_openai_with_tracking
 from markdown import markdown
 from playwright.async_api import async_playwright
 from src.models.scoring import format_score_block
-import re
 from weasyprint import HTML
 from pathlib import Path
 from src.utils.report_utils import inject_html_style
+import re
+import markdown2
+
 
 def generate_final_summary(agent, model="gpt-3.5-turbo", temperature=0.7):
     """
@@ -320,209 +322,177 @@ def format_upgraded_sections(agent):
     return "\n".join(lines)
 
 
+def escape_markdown(text: str) -> str:
+    """Escape problematic markdown characters."""
+    return text.replace("_", "\\_").replace("|", "\\|")
+
 def export_proposal_report_to_markdown(results, overall_score, swot_summary, proposal_name, output_dir=os.path.join("outputs", "proposal_eval_reports")):
-    """
-    Exports a proposal evaluation report to a Markdown file.
+    from pathlib import Path
+    import os
 
-    This function generates a Markdown report summarizing the evaluation of a proposal.
-    It includes scores, thoughts, tools used, explanations, an overall score, and a SWOT
-    (Strengths, Weaknesses, Opportunities, Threats) assessment. The report is saved to
-    the specified output directory.
-
-    Parameters:
-        results (list of dict): A list of dictionaries where each dictionary represents
-            the evaluation of a specific criterion. Each dictionary should have the
-            following keys:
-                - 'criterion' (str): The name of the evaluation criterion.
-                - 'proposal_score' (int): The score for the criterion (out of 10).
-                - 'top_thoughts' (list of str): A list of key thoughts or observations.
-                - 'triggered_tools' (list of dict, optional): A list of tools used, where
-                  each tool is represented as a dictionary with:
-                    - 'tool' (str): The name of the tool.
-                    - 'result' (str): The result or output of the tool.
-                - 'proposal_explanation' (str): A detailed explanation for the score.
-        overall_score (int): The overall score for the proposal (out of 10).
-        swot_summary (str): A summary of the SWOT assessment for the proposal.
-        proposal_name (str): The name of the proposal being evaluated.
-        output_dir (str, optional): The directory where the Markdown file will be saved.
-            Defaults to "Outputs".
-
-    Flow:
-        1. Creates the output directory if it does not exist.
-        2. Constructs the Markdown content line by line, including:
-            - Proposal name and evaluation details for each criterion.
-            - Overall score and SWOT assessment.
-        3. Writes the constructed Markdown content to a file named
-           `<proposal_name>_evaluation.md` in the specified output directory.
-
-    Returns:
-        str: The file path of the generated Markdown report.
-
-    Example:
-        md_path = export_proposal_report_to_markdown(
-            results=[
-                {
-                    "criterion": "Innovation",
-                    "proposal_score": 8,
-                    "top_thoughts": ["Creative approach", "Unique solution"],
-                    "triggered_tools": [{"tool": "AI Analyzer", "result": "Positive feedback"}],
-                    "proposal_explanation": "The proposal demonstrates innovative thinking."
-                }
-            ],
-            overall_score=9,
-            swot_summary="Strengths: Innovative. Weaknesses: High cost.",
-            proposal_name="Tech Proposal",
-            output_dir="Reports"
-        )
-        print(f"Report saved at: {md_path}")
-    """
- 
-    # Create output directory as a peer to src and notebooks
-    root_dir = Path(__file__).resolve().parents[2]  # Adjust depth as needed
+    # Create output directory
+    root_dir = Path(__file__).resolve().parents[2]
     output_dir = root_dir / "outputs" / "proposal_eval_reports"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    os.makedirs(output_dir, exist_ok=True)
-    md_lines = []
+    md_lines = [f"# 📊 Proposal Evaluation – {proposal_name}", ""]
 
-    md_lines.append(f"# 📊 Proposal Evaluation – {proposal_name}\n")
+    for idx, r in enumerate(results, start=1):
+        criterion = escape_markdown(r["criterion"])
+        score = r["proposal_score"]
+        explanation = escape_markdown(r["proposal_explanation"].strip())
+        thoughts = r.get("all_thoughts", [])
+        tools = r.get("triggered_tools", [])
 
-    for r in results:
-        md_lines.append(f"\n## 🔹 Criterion: {r['criterion']}")
-        md_lines.append(f"**Score**: {r['proposal_score']}/10\n")
+        md_lines.append(f"\n## {idx}. 🔹 Criterion: {criterion}")
+        md_lines.append(f"**Score:** {score}/10\n")
+
         md_lines.append("### 🧠 Thoughts:")
-        for t in r["all_thoughts"]:
-            md_lines.append(f"- {t}")
+        if thoughts:
+            for t in thoughts:
+                t_clean = escape_markdown(t.replace("\n", " ").strip("-*• ").strip())
+                if t_clean:
+                    md_lines.append(f"- {t_clean}")
+        else:
+            md_lines.append("- _(No thoughts generated)_")
+
         md_lines.append("\n### 🛠️ Tools Used:")
-        if r.get("triggered_tools"):
-            for tool in r["triggered_tools"]:
-                md_lines.append(f"- **{tool['tool']}**: {tool['result']}")
+        if tools:
+            for tool in tools:
+                tool_name = escape_markdown(tool.get("tool", "Unknown"))
+                result = escape_markdown(tool.get("result", "").strip().replace("\n", " "))
+                result = result[:300] + "..." if len(result) > 300 else result
+                md_lines.append(f"- **{tool_name}**: {result}")
         else:
             md_lines.append("- _(No tools used)_")
 
-        md_lines.append(f"\n### 🗣️ Explanation:\n{r['proposal_explanation']}\n")
+        md_lines.append("\n### 🗣️ Explanation:")
+        md_lines.append(explanation or "_(No explanation provided)_")
 
-    md_lines.append(f"\n## ✅ Overall Score: {overall_score}/10\n")
+    # Final score and SWOT
+    md_lines.append(f"\n## ✅ Overall Score: {overall_score}/10")
+    md_lines.append("\n## 📋 SWOT Assessment:\n")
+    md_lines.append(escape_markdown(swot_summary.strip()) or "_(No SWOT provided)_")
 
-    md_lines.append("## 📋 SWOT Assessment:\n")
-    md_lines.append(swot_summary.strip())
-
-    # Write .md file
-    md_path = os.path.join(output_dir, f"{proposal_name}_evaluation.md")
+    # Write to file
+    md_path = output_dir / f"{proposal_name}_evaluation.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write("\n".join(md_lines))
 
-    return md_path
-
+    return str(md_path)
 
 
 def convert_markdown_to_pdf(md_path):
     """
-    Converts a Markdown file to a PDF file.
-
-    This function reads a Markdown file, converts its content to HTML, 
-    writes the HTML content to a temporary HTML file, and then generates 
-    a PDF file from the HTML content.
-
-    Parameters:
-        md_path (str): The file path to the Markdown file to be converted. 
-                       The file should have a ".md" extension.
-
-    Flow:
-        1. Reads the Markdown file specified by `md_path`.
-        2. Converts the Markdown content to HTML using a Markdown parser.
-        3. Writes the HTML content to a temporary HTML file with the same 
-           base name as the Markdown file but with a ".html" extension.
-        4. Converts the HTML file to a PDF file using a library that supports 
-           HTML-to-PDF conversion.
-        5. Saves the PDF file with the same base name as the Markdown file 
-           but with a ".pdf" extension.
-
-    Returns:
-        str: The file path to the generated PDF file.
-
-    Raises:
-        FileNotFoundError: If the specified Markdown file does not exist.
-        Exception: If there is an error during the file conversion process.
+    Converts a Markdown file to a styled PDF file using markdown2 + weasyprint.
     """
+    import os
+    from pathlib import Path
+
     with open(md_path, "r", encoding="utf-8") as f:
         md_content = f.read()
 
-    html_content = markdown(md_content)
-    styled_html = inject_html_style(html_content)
-    html_path = md_path.replace(".md", ".html")
-    pdf_path = md_path.replace(".md", ".pdf")
+    # Step 1: Convert to HTML using markdown2 with extras
+    html_content = markdown2.markdown(md_content, extras=["fenced-code-blocks", "tables", "strike", "smarty"])
 
+    # Step 2: Inject style
+    styled_html = inject_html_style(html_content, for_pdf=True)
+
+    # Step 3: Save HTML file
+    html_path = md_path.replace(".md", ".html")
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(styled_html)
 
+    # Step 4: Convert HTML to PDF
+    pdf_path = md_path.replace(".md", ".pdf")
     HTML(html_path).write_pdf(pdf_path)
+
     return pdf_path
 
 
 def export_proposal_report(vendor_name, results, overall_score, swot_summary, output_dir: Path):
     """
-    Combines export steps: generates markdown, HTML, and PDF for the given proposal.
-
-    Parameters:
-        vendor_name (str): e.g., 'Vendor A'
-        results (list): List of criterion evaluations
-        overall_score (float): Score out of 10
-        swot_summary (str): SWOT markdown summary
-        output_dir (Path): Where to save the files
+    Generates Markdown, HTML (emoji-safe), and PDF (font-safe) versions of a vendor proposal evaluation report.
     """
     # 1. Export Markdown
     markdown_path = export_proposal_report_to_markdown(
-        results, overall_score, swot_summary, proposal_name=vendor_name, output_dir=output_dir
+        results=results,
+        overall_score=overall_score,
+        swot_summary=swot_summary,
+        proposal_name=vendor_name,
+        output_dir=output_dir
     )
 
-    # 2. Convert to HTML and PDF
-    convert_markdown_to_pdf(markdown_path)
-
-
-import os
-from markdown import markdown
-from weasyprint import HTML
+    # 2. Convert to HTML and PDF from the same Markdown source
+    convert_markdown_to_html_and_pdf_rfp(markdown_path)
 
 
 def save_markdown_and_pdf(markdown_text, additional_md, filename, output_dir="outputs"):
     """
-    Save markdown to .md and convert to .pdf using WeasyPrint.
+    Save markdown to .md and generate HTML and PDF with appropriate styling.
 
     Parameters:
-        markdown_text (str): The markdown content to save.
-        additional_md (str): Additional markdown content to save.
-        filename (str): Filename without extension.
-        output_dir (str): Folder to save outputs.
+        markdown_text (str): Main markdown content.
+        additional_md (str): Preceding markdown content (e.g., score table).
+        filename (str): Output file prefix (no extension).
+        output_dir (str): Folder to save outputs (relative to project root).
     """
-     # Create output directory as a peer to src and notebooks
-    root_dir = Path(__file__).resolve().parents[2]  # Adjust depth as needed
+    # Resolve and create output directory
+    root_dir = Path(__file__).resolve().parents[2]
     output_dir = root_dir / "outputs" / "proposal_eval_reports"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Flip order: show score table (additional_md) before report_text
+    # Compose full report: table first, then content
     full_report = ""
     if additional_md:
-        full_report += "## 📊 Score Comparison\n\n" + additional_md + "\n\n---\n\n"
-    full_report += markdown_text
+        full_report += "## 📊 Score Comparison\n\n" + additional_md.strip() + "\n\n---\n\n"
+    full_report += markdown_text.strip()
 
-    # Save .md file
-    md_path = os.path.join(output_dir, f"{filename}.md")
-    with open(md_path, "w") as f:
+    # === 1. Save as Markdown ===
+    md_path = output_dir / f"{filename}.md"
+    with open(md_path, "w", encoding="utf-8") as f:
         f.write(full_report)
 
-    # Convert markdown to HTML
-    raw_html = markdown(full_report, output_format="html5")
-    html_content = inject_html_style(raw_html)  # uses existing style injection
+    # === 2. Convert to HTML and PDF ===
+    html_body = markdown(full_report, output_format="html5")
 
-    # Save .html file
-    html_path = os.path.join(output_dir, f"{filename}.html")
-    with open(html_path, "w") as f:
-        f.write(html_content)
+    # HTML: emoji-friendly
+    html_path = output_dir / f"{filename}.html"
+    styled_html = inject_html_style(html_body, for_pdf=False)
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(styled_html)
 
-    # Save .pdf file
-    pdf_path = os.path.join(output_dir, f"{filename}.pdf")
-    HTML(string=html_content).write_pdf(pdf_path)
+    # PDF: font-safe version
+    pdf_path = output_dir / f"{filename}.pdf"
+    styled_html_pdf = inject_html_style(html_body, for_pdf=True)
+    HTML(string=styled_html_pdf).write_pdf(pdf_path)
 
     print(f"✅ Saved: {md_path}, {html_path}, {pdf_path}")
 
+def convert_markdown_to_html_and_pdf_rfp(md_path):
+    """
+    Converts a Markdown file into both:
+    - HTML (with emoji-safe styling)
+    - PDF (with font-safe styling)
+    """
+    import markdown
+    from weasyprint import HTML
+
+    with open(md_path, "r", encoding="utf-8") as f:
+        md_content = f.read()
+
+    # Convert markdown to raw HTML
+    html_content = markdown.markdown(md_content)
+
+    # === HTML Export ===
+    styled_html = inject_html_style(html_content, for_pdf=False)
+    html_path = md_path.replace(".md", ".html")
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(styled_html)
+
+    # === PDF Export ===
+    styled_html_pdf = inject_html_style(html_content, for_pdf=True)
+    pdf_path = md_path.replace(".md", ".pdf")
+    HTML(string=styled_html_pdf).write_pdf(pdf_path)
+
+    return html_path, pdf_path

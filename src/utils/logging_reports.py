@@ -68,7 +68,11 @@ def finalize_evaluation_run(output_dir="../outputs/proposal_eval_reports", logs_
     summary_lines.append("\n## 🧠 Reasoning Chain Analysis")
     summary_lines.append(generate_reasoning_trace_md(results))
     summary_lines.append("\n---\n")
-
+    # === Reasoning Lineage Table ===
+    summary_lines.append("\n## 🧠 Reasoning Lineage Table (All Criteria)\n")
+    summary_lines.append(generate_reasoning_lineage_table_md(results))
+    summary_lines.append("\n---\n")
+    
     # --- OPENAI CALLS ---
     summary_lines.append("## 🔄 OpenAI API Calls")
     summary_lines.append(f"- Total Calls: {logging_utils.openai_call_counter}")
@@ -296,9 +300,8 @@ def generate_reasoning_trace_md(results, plots_dir="plots"):
             lines.append("\n#### 🤖 Auto-Run Tools")
             for tool in auto_tools:
                 summary = tool["result"][:200].replace("\n", " ") + "..." if tool["result"] else "No result"
-                reused = "✅ Reused from another criterion" if tool["already_run_elsewhere"] else "🆕 First use"
                 sim_score = f"{tool['similarity_score']:.3f}" if tool.get("similarity_score") is not None else "N/A"
-                lines.append(f"- `{tool['tool']}` for *{tool['criterion']}* (Score: {sim_score}) – {reused}")
+                lines.append(f"- `{tool['tool']}` for *{tool['criterion']}* (Score: {sim_score})")
                 lines.append(f"  > {summary}")
     
         # === Reasoning Lineage Visualization ===
@@ -348,3 +351,30 @@ def generate_embedding_cache_md():
 - Total Requests: {total}
 - Cache Hit Rate: **{hit_rate:.1f}%**
 """.strip()
+
+
+def generate_reasoning_lineage_table_md(results):
+    lines = ["## 🧠 Reasoning Lineage Table\n"]
+
+    for res in results:
+        trace = res.get("reasoning_trace", {})
+        if not trace:
+            continue
+
+        lines.append(f"\n### 🔹 {trace['criterion']}\n")
+        lines.append("| Step | Thought | Source | Action | Observation | Used in Score | Tool Success |")
+        lines.append("|------|---------|--------|--------|-------------|----------------|---------------|")
+
+        # ToT thoughts
+        for i, t in enumerate(trace.get("tot_thoughts", [])):
+            lines.append(f"| ToT-{i+1} | {t['text']} | ToT | — | — | {'✅' if t['used_in_score'] else '❌'} | — |")
+
+        # ReAct steps
+        for step in trace.get("react_steps", []):
+            lines.append(
+                f"| Step {step['step']} | {step['thought']} | ReAct | `{step['action']}` | {step['observation'][:40]}... "
+                f"| {'✅' if step['used_in_score'] else '❌'} | {'✅' if step['tool_succeeded'] else '❌'} |"
+            )
+
+    return "\n".join(lines)
+

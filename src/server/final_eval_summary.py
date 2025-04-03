@@ -23,7 +23,7 @@ def generate_final_comparison_summary(all_vendor_evaluations, model="gpt-3.5-tur
         rows.append(row)
 
     df = pd.DataFrame(rows)
-    score_table_md = df.to_markdown(index=False)
+    score_table_html = df.to_html(index=False, classes="score-table", border=0)
 
     # Build evaluation text block
     eval_blocks = []
@@ -41,7 +41,7 @@ You are a strategic advisor to a government client reviewing multiple vendor pro
 
 Below is a score comparison table, followed by detailed evaluation summaries and SWOT assessments for each vendor.
 
-{score_table_md}
+{score_table_html}
 
 {all_eval_text}
 
@@ -56,4 +56,4 @@ Write in a professional, client-facing tone.
 """
     messages = [{"role": "user", "content": prompt}]
     comparison_summary = call_openai_with_tracking(messages, model=model)
-    return comparison_summary, score_table_md
+    return comparison_summary, score_table_html

@@ -108,7 +108,7 @@ def evaluate_single_criterion(criterion, section_text, proposal_text, model, see
         max_steps=2,
         seen_thoughts=seen_thoughts,
         seen_embeddings=seen_embeddings,
-        global_executed_tools=executed_tools_global
+        executed_tools_global=executed_tools_global
     )
 
     # Step 5: Extract ReAct Thought->Act->Observe history for context in proposal evaluation
